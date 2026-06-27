@@ -1,6 +1,6 @@
 # =========================================================================
 # Имя файла: clean-and-photo.ps1
-# Назначение: Очистка системы и активация Photo Viewer
+# Назначение: Очистка системы, активация Photo Viewer и блокировка рекламы
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -26,8 +26,6 @@ try {
         "Microsoft.ZuneMusic",          # Музыка Groove (Groove Music) - СНОСИМ!
         "office.outlook",               # Новый Outlook
         "windowscommunicationsapps",    # Почта и Календарь
-		"Microsoft.MicrosoftStickyNotes", # Sticky Notes (Заметки)
-        "Microsoft.Office.Desktop",       # OEM-заглушки классического Office
         "Microsoft.3DViewer",           # 3D Просмотрщик
         "Microsoft.MixedReality.Portal",# Portal смешанной реальности
         "Microsoft.BingNews",           # Новости
@@ -101,8 +99,74 @@ try {
     
     Write-Host ">>> Просмотр фотографий успешно настроен по умолчанию!"
 
+    # ----------------------------------------------------
+    # ЭТАП 3: БЛОКИРОВКА СЕТЕВОЙ РЕКЛАМЫ (ОБНОВЛЕНИЯ РАЗРЕШЕНЫ)
+    # ----------------------------------------------------
+    Write-Host ">>> Применение твиков для блокировки скачивания мусора из сети..."
+
+    # 1. Глобальные политики (для всей машины) против рекламы и потребительских функций
+    $CloudContentPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+    if (-not (Test-Path $CloudContentPath)) { New-Item -Path $CloudContentPath -Force | Out-Null }
+    Set-ItemProperty -Path $CloudContentPath -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $CloudContentPath -Name "DisableCloudOptimizedContent" -Value 1 -Type DWord -Force
+
+    # 2. ЖЕСТКАЯ БЛОКИРОВКА НА УРОВНЕ ДЕФОЛТНОГО ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ (Default User Hive)
+    Write-Host ">>> Монтирование дефолтного куста реестра для отключения тихой установки приложений..."
+    if (-not (Test-Path "HKLM:\TargetUser")) {
+        reg load "HKLM\TargetUser" "C:\Users\Default\NTUSER.DAT" | Out-Null
+    }
+
+    $RegistryPaths = @(
+        "HKLM:\TargetUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager",
+        "HKLM:\TargetUser\Software\Policies\Microsoft\Windows\CloudContent"
+    )
+    foreach ($path in $RegistryPaths) {
+        if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+    }
+
+    # Гасим службу тихой установки стороннего софта (ContentDeliveryManager) намертво
+    Set-ItemProperty -Path "HKLM:\TargetUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SilentInstalledAppsEnabled" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path "HKLM:\TargetUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "ContentDeliveryAllowed" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path "HKLM:\TargetUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "OemPreInstalledAppsEnabled" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path "HKLM:\TargetUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "PreInstalledAppsEnabled" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path "HKLM:\TargetUser\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Value 1 -Type DWord -Force
+
+    # Размонтируем куст обратно в систему
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+    reg unload "HKLM\TargetUser" | Out-Null
+    Write-Host ">>> Профиль по умолчанию защищен от рекламы."
+
+    # 3. Настройка Центра Обновлений (Обновления РАБОТАЮТ, мусор НЕ качается)
+    $WindowsUpdatePath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+    if (-not (Test-Path $WindowsUpdatePath)) { New-Item -Path $WindowsUpdatePath -Force | Out-Null }
+    Set-ItemProperty -Path $WindowsUpdatePath -Name "DisableWindowsUpdateAccess" -Value 0 -Type DWord -Force 
+    
+    $AppUpdatePath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Orchestrator"
+    if (-not (Test-Path $AppUpdatePath)) { New-Item -Path $AppUpdatePath -Force | Out-Null }
+    Set-ItemProperty -Path $AppUpdatePath -Name "DisableAppUpgrades" -Value 1 -Type DWord -Force
+
+    # 4. ТОЧЕЧНАЯ БЛОКИРОВКА ПОВТОРНОГО СКАЧИВАНИЯ OUTLOOK И ЯНДЕКСА
+    Write-Host ">>> Внесение Outlook и Яндекса в черный список установки (Deprovision)..."
+    $BlackList = @(
+        "Microsoft.OutlookForWindows_8wekyb3d8bbwe",
+        "A025C540.Yandex.Music_vfvw9svesycw6"
+    )
+    foreach ($Family in $BlackList) {
+        $DeprovisionPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovision\$Family"
+        if (-not (Test-Path $DeprovisionPath)) { New-Item -Path $DeprovisionPath -Force | Out-Null }
+    }
+
+    Write-Host ">>> Сетевой мусор заблокирован. Центр обновлений остался активным."
+
 } catch {
     Write-Warning "Ошибка во время оптимизации: $($_.Exception.Message)"
+    # На случай сбоя, чтобы куст реестра не остался заблокирован
+    if (Test-Path "HKLM:\TargetUser") {
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
+        reg unload "HKLM\TargetUser" | Out-Null
+    }
 } finally {
     Stop-Transcript
 }
