@@ -1,6 +1,6 @@
 # =========================================================================
-# Назначение: Модернизированный GUI Диспетчер автоматизации (Modern Dark UI)
-# Режим запуска: Полностью скрытый для дочерних процессов
+# Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
+# Режим запуска: Полное скрытие собственного окна консоли + дочерних процессов
 # Кодировка: UTF-8 с BOM (Обязательно для корректной кириллицы)
 # =========================================================================
 
@@ -8,7 +8,20 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 
-# Подгружаем библиотеки графического интерфейса Windows
+# --- МАГИЯ: СКРЫВАЕМ СОБСТВЕННОЕ ОКНО КОНСОЛИ POWERSHELL ПРИ СТАРТЕ ---
+$Win32Code = @'
+[DllImport("user32.dll")]
+public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+[DllImport("kernel32.dll")]
+public static extern IntPtr GetConsoleWindow();
+'@
+$WindowManager = Add-Type -MemberDefinition $Win32Code -Name "Win32ShowWindow" -Namespace "Win32" -PassThru
+$ConsoleHandle = $WindowManager::GetConsoleWindow()
+if ($ConsoleHandle -ne [System.IntPtr]::Zero) {
+    $null = $WindowManager::ShowWindow($ConsoleHandle, 0)
+}
+
+# Подгружаем библиотеки графического интерфейса
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -29,9 +42,9 @@ $ScriptsToRun = @(
 # --- СОЗДАНИЕ И СТИЛИЗАЦИЯ GUI ИНТЕРФЕЙСА (DARK MODE) ---
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = " Системная автоматизация Windows"
-$Form.Size = New-Object System.Drawing.Size(650, 480)
-$Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37) # Глубокий темный
-$Form.ForeColor = [System.Drawing.Color]::FromArgb(205, 214, 244) # Бело-серый текст
+$Form.Size = New-Object System.Drawing.Size(960, 480)
+$Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37) # Глубокий темный (Catppuccin Mocha Mocha)
+$Form.ForeColor = [System.Drawing.Color]::FromArgb(205, 214, 244)
 $Form.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
 $Form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
@@ -39,50 +52,97 @@ $Form.MaximizeBox = $false
 
 # Шапка (Заголовок)
 $HeaderPanel = New-Object System.Windows.Forms.Panel
-$HeaderPanel.Size = New-Object System.Drawing.Size(650, 60)
+$HeaderPanel.Size = New-Object System.Drawing.Size(960, 60)
 $HeaderPanel.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 46)
 $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
 $TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold)
-$TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) # Приятный синий акцент
+$TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) # Неоново-синий
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
 $TitleLabel.AutoSize = $true
 $HeaderPanel.Controls.Add($TitleLabel)
 
-# Общий контейнер для списка задач
+# Общий контейнер для списка задач (Левая сторона)
 $TasksContainer = New-Object System.Windows.Forms.Panel
 $TasksContainer.Location = New-Object System.Drawing.Point(20, 80)
-$TasksContainer.Size = New-Object System.Drawing.Size(595, 200)
+$TasksContainer.Size = New-Object System.Drawing.Size(540, 200)
 $TasksContainer.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 46)
 $Form.Controls.Add($TasksContainer)
 
-# Отрисовка элементов задач на панели
+# --- ПРАВАЯ СТИЛИЗОВАННАЯ КИБЕРПАНК-ПАНЕЛЬ ЛОГА ---
+$LogContainer = New-Object System.Windows.Forms.Panel
+$LogContainer.Location = New-Object System.Drawing.Point(580, 80)
+$LogContainer.Size = New-Object System.Drawing.Size(340, 275)
+$LogContainer.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27) # Еще более глубокий черный для контраста терминала
+$Form.Controls.Add($LogContainer)
+
+# Тонкая неоновая полоска сверху лога для стиля
+$NeonLine = New-Object System.Windows.Forms.Panel
+$NeonLine.Location = New-Object System.Drawing.Point(0, 0)
+$NeonLine.Size = New-Object System.Drawing.Size(340, 3)
+$NeonLine.BackColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
+$LogContainer.Controls.Add($NeonLine)
+
+# Текстовое поле для терминального вывода
+$LogTextBox = New-Object System.Windows.Forms.RichTextBox
+$LogTextBox.Location = New-Object System.Drawing.Point(15, 15)
+$LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
+$LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
+$LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
+$LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
+$LogTextBox.ReadOnly = $true
+$LogContainer.Controls.Add($LogTextBox)
+
+# ПРОДВИНУТАЯ СТИЛИЗОВАННАЯ ФУНКЦИЯ ЛОГА
+function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
+    $Time = (Get-Date).ToString("HH:mm:ss")
+    
+    # 1. Печатаем таймстамп серо-синим цветом
+    $LogTextBox.SelectionStart = $LogTextBox.TextLength
+    $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb(108, 112, 134)
+    $LogTextBox.AppendText("[$Time] ")
+
+    # 2. Печатаем красивый префикс (например [ RUN ], [ OK ])
+    $LogTextBox.SelectionStart = $LogTextBox.TextLength
+    $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb($ColorRGB[0], $ColorRGB[1], $ColorRGB[2])
+    $LogTextBox.AppendText("[$Prefix] ")
+
+    # 3. Печатаем само сообщение
+    $LogTextBox.SelectionStart = $LogTextBox.TextLength
+    $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb(205, 214, 244) # Обычный светлый текст
+    $LogTextBox.AppendText("$Message`r`n")
+    
+    # Скролл вниз
+    $LogTextBox.ScrollToCaret()
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 150 # Эффект "живого" вывода, чтобы текст приятно бежал
+}
+
+# Отрисовка элементов задач на левой панели
 $ScriptControls = @()
 $YOffset = 15
 
 for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $CurrentScript = $ScriptsToRun[$i]
 
-    # Текст задачи
     $TaskLabel = New-Object System.Windows.Forms.Label
     $TaskLabel.Text = $CurrentScript.Title
     $TaskLabel.Location = New-Object System.Drawing.Point(20, $YOffset)
-    $TaskLabel.Size = New-Object System.Drawing.Size(400, 25)
+    $TaskLabel.Size = New-Object System.Drawing.Size(360, 25)
     $TaskLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11)
     $TasksContainer.Controls.Add($TaskLabel)
 
-    # Статус задачи (визуальный маркер)
     $StatusLabel = New-Object System.Windows.Forms.Label
     $StatusLabel.Text = "• Ожидание"
-    $StatusLabel.Location = New-Object System.Drawing.Point(450, $YOffset)
+    $StatusLabel.Location = New-Object System.Drawing.Point(400, $YOffset)
     $StatusLabel.Size = New-Object System.Drawing.Size(130, 25)
     $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold)
-    $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200) # Серый
+    $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
     $TasksContainer.Controls.Add($StatusLabel)
 
-    # Сохраняем ссылки для динамического обновления
     $ScriptControls += [PSCustomObject]@{
         TaskLabel   = $TaskLabel
         StatusLabel = $StatusLabel
@@ -90,19 +150,19 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $YOffset += 40
 }
 
-# Строка текущего действия (Мини-лог)
+# Строка текущего действия (Мини-лог снизу)
 $CurrentActionLabel = New-Object System.Windows.Forms.Label
-$CurrentActionLabel.Text = "Подготовка к запуску автоматизации..."
+$CurrentActionLabel.Text = "Инициализация подсистем..."
 $CurrentActionLabel.Location = New-Object System.Drawing.Point(20, 300)
-$CurrentActionLabel.Size = New-Object System.Drawing.Size(595, 25)
+$CurrentActionLabel.Size = New-Object System.Drawing.Size(540, 25)
 $CurrentActionLabel.Font = New-Object System.Drawing.Font("Segoe UI Italic", 10, [System.Drawing.FontStyle]::Italic)
-$CurrentActionLabel.ForeColor = [System.Drawing.Color]::FromArgb(245, 194, 231) # Розоватый акцент
+$CurrentActionLabel.ForeColor = [System.Drawing.Color]::FromArgb(245, 194, 231)
 $Form.Controls.Add($CurrentActionLabel)
 
 # Нативный прогресс-бар
 $ProgressBar = New-Object System.Windows.Forms.ProgressBar
 $ProgressBar.Location = New-Object System.Drawing.Point(20, 330)
-$ProgressBar.Size = New-Object System.Drawing.Size(595, 25)
+$ProgressBar.Size = New-Object System.Drawing.Size(540, 25)
 $ProgressBar.Minimum = 0
 $ProgressBar.Maximum = $ScriptsToRun.Count
 $ProgressBar.Value = 0
@@ -111,8 +171,8 @@ $Form.Controls.Add($ProgressBar)
 # Нижний колонтитул
 $FooterLabel = New-Object System.Windows.Forms.Label
 $FooterLabel.Text = "Пожалуйста, не закрывайте это окно до завершения всех процессов."
-$FooterLabel.Location = New-Object System.Drawing.Point(20, 380)
-$FooterLabel.Size = New-Object System.Drawing.Size(595, 25)
+$FooterLabel.Location = New-Object System.Drawing.Point(20, 390)
+$FooterLabel.Size = New-Object System.Drawing.Size(900, 25)
 $FooterLabel.ForeColor = [System.Drawing.Color]::FromArgb(147, 153, 178)
 $FooterLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $Form.Controls.Add($FooterLabel)
@@ -122,62 +182,101 @@ $Form.Controls.Add($FooterLabel)
 $Form.Add_Shown({
     $ScriptsDir = "C:\Windows\Setup\Scripts"
     
+    # Кастомные цвета палитры RGB
+    $Cyan   = @(137, 220, 235)
+    $Purple = @(203, 166, 247)
+    $Green  = @(166, 227, 161)
+    $Red    = @(243, 139, 168)
+    $Yellow = @(249, 226, 175)
+
+    Add-LogLine "CORE" "Запуск планировщика автоматизации..." $Cyan
+    Start-Sleep -Milliseconds 400
+    
     for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
         $Script = $ScriptsToRun[$i]
         $Controls = $ScriptControls[$i]
         $ScriptPath = Join-Path $ScriptsDir $Script.Name
 
-        # 1. Обновляем статус на "Выполняется"
+        # Статус на "Выполняется"
         $Controls.StatusLabel.Text = "▶ Выполняется..."
-        $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 220, 235) # Бирюзовый
-        $CurrentActionLabel.Text = "Выполняется фоновый модуль: $($Script.Name)..."
+        $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 220, 235)
+        $CurrentActionLabel.Text = "Запуск: $($Script.Name)..."
         
-        # Перерисовываем интерфейс, чтобы избежать зависания формы
-        [System.Windows.Forms.Application]::DoEvents()
-        Start-Sleep -Milliseconds 300 # Небольшая пауза для визуальной плавности
+        # Интерактивный кастомный вывод
+        switch ($Script.Name) {
+            "clean-and-photo.ps1" {
+                Add-LogLine "TASK" "Инициализация модуля очистки" $Purple
+                Add-LogLine "UWP"  "Уничтожение мусорных Win10/11 приложений"
+                Add-LogLine "CACH" "Очистка системных дампов, логов и кэша"
+                Add-LogLine "OPT"  "Оптимизация базы данных кэша фотографий"
+            }
+            "install-sys-components.ps1" {
+                Add-LogLine "TASK" "Развертывание компонентов среды" $Purple
+                Add-LogLine "NET"  "Включение .NET Framework 3.5 и 4.8"
+                Add-LogLine "DX32" "Инсталляция библиотек DirectX / Vulkan"
+                Add-LogLine "VCPP" "Обновление рантаймов Microsoft VC++ (2005-2022)"
+            }
+            "apps-install.ps1" {
+                Add-LogLine "TASK" "Развертывание пользовательского ПО" $Purple
+                Add-LogLine "WING" "Подключение пакетного менеджера"
+                Add-LogLine "WEBB" "Тихая установка Google Chrome (Стабильный)"
+                Add-LogLine "UTIL" "Развертывание базовых утилит архитектуры"
+            }
+            "office-install.ps1" {
+                Add-LogLine "TASK" "Развертывание офисного пакета" $Purple
+                Add-LogLine "DISC" "Монтирование дистрибутива MS Office"
+                Add-LogLine "EXEC" "Принудительный silent-монтаж пакета"
+                Add-LogLine "ACTV" "Инъекция лицензии и активация через KMS"
+            }
+        }
 
         if (Test-Path $ScriptPath) {
             try {
-                # Дочерние процессы запускаются скрыто (-WindowStyle Hidden)
                 $Proc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WindowStyle Hidden -Wait -PassThru
                 
                 if ($Proc.ExitCode -eq 0) {
                     $Controls.StatusLabel.Text = "✓ Готово"
-                    $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 227, 161) # Зеленый
+                    $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 227, 161)
+                    Add-LogLine " OK " "Модуль завершен успешно." $Green
                 } else {
                     $Controls.StatusLabel.Text = "✗ Сбой (Код: $($Proc.ExitCode))"
-                    $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(243, 139, 168) # Красный
+                    $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(243, 139, 168)
+                    Add-LogLine "FAIL" "Код возврата ошибки: $($Proc.ExitCode)" $Red
                 }
             } catch {
-                $Controls.StatusLabel.Text = "✗ Критическая ошибка"
+                $Controls.StatusLabel.Text = "✗ Ошибка"
                 $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(243, 139, 168)
+                Add-LogLine "ERR " "Критическое исключение потока!" $Red
             }
         } else {
             $Controls.StatusLabel.Text = "⚠ Отсутствует"
-            $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(249, 226, 175) # Желтый
+            $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(249, 226, 175)
+            Add-LogLine "WARN" "Файл скрипта не найден на диске!" $Yellow
         }
 
-        # Обновляем общий прогресс
         $ProgressBar.Value = $i + 1
         [System.Windows.Forms.Application]::DoEvents()
     }
 
     # --- ЗАВЕРШАЮЩИЙ ЭТАП ---
-    $CurrentActionLabel.Text = "Все основные задачи обработаны. Запуск очистки..."
+    $CurrentActionLabel.Text = "Финальная зачистка временных директорий..."
     $CurrentActionLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 227, 161)
+    
+    Add-LogLine "DONE" "Все сценарии успешно обработаны." $Green
+    Add-LogLine "POST" "Инициализация reset-setup-scripts.ps1" $Cyan
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 1.5
 
     $ResetPath = Join-Path $ScriptsDir "reset-setup-scripts.ps1"
     if (Test-Path $ResetPath) {
         Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ResetPath`"" -WindowStyle Hidden
     }
 
-    # Автоматически закрываем меню по завершении
-    Start-Sleep -Seconds 1
+    Add-LogLine "EXIT" "Завершение работы через 3 секунды..." $Yellow
+    Start-Sleep -Seconds 3
     $Form.Close()
 })
 
-# Запуск приложения графического интерфейса
+# Запуск GUI приложения
 [System.Windows.Forms.Application]::Run($Form)
 Stop-Transcript
