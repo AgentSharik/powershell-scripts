@@ -1,6 +1,6 @@
 # =========================================================================
-# Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
-# Исправлено: Полное имя типа System.Drawing.FontStyle
+# Назначение: Модернизированный GUI Диспетчер автоматизации (Fixed)
+# Режим: Исправлены FontStyle (заменены на целочисленные значения)
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -49,7 +49,8 @@ $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
-$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold) # Исправлено
+# ИСПОЛЬЗУЕМ 1 ВМЕСТО [System.Drawing.FontStyle]::Bold
+$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, 1) 
 $TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) 
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
 $TitleLabel.AutoSize = $true
@@ -74,7 +75,8 @@ $LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
 $LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
 $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
+# ИСПОЛЬЗУЕМ 1 ВМЕСТО Bold
+$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, 1)
 $LogTextBox.ReadOnly = $true
 $LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
 $LogContainer.Controls.Add($LogTextBox)
@@ -122,7 +124,8 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $StatusLabel.Text = "• Ожидание"
     $StatusLabel.Location = New-Object System.Drawing.Point(400, $YOffset)
     $StatusLabel.Size = New-Object System.Drawing.Size(130, 25)
-    $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold) # Исправлено
+    # ИСПОЛЬЗУЕМ 1 ВМЕСТО Bold
+    $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, 1) 
     $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
     $TasksContainer.Controls.Add($StatusLabel)
     
