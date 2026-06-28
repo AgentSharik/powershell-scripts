@@ -37,6 +37,7 @@ $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
 $Form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
 $Form.MaximizeBox = $false
 $Form.TopMost = $true 
+$Form.Add_FormClosing({ Exit-Application })
 
 $HeaderPanel = New-Object System.Windows.Forms.Panel
 $HeaderPanel.Size = New-Object System.Drawing.Size(960, 60)
