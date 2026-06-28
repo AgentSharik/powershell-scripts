@@ -26,6 +26,7 @@ $ScriptsToRun = @(
     @{ Name = "office-install.ps1";         Title = "Установка и активация Microsoft Office"; Status = "Ожидание" }
 )
 
+# --- GUI ---
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = " Автоматическая настройка системы"
 $Form.Size = New-Object System.Drawing.Size(960, 480)
@@ -44,8 +45,8 @@ $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "Менеджер автоматической настройки"
-# ИСПРАВЛЕНО: принудительное приведение типа
-$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]1)
+# ИСПРАВЛЕНО: используем именованную константу
+$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold)
 $TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
 $TitleLabel.AutoSize = $true
@@ -69,8 +70,8 @@ $LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
 $LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
 $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-# ИСПРАВЛЕНО: принудительное приведение типа
-$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]1)
+# ИСПРАВЛЕНО: используем именованную константу
+$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
 $LogTextBox.ReadOnly = $true
 $LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
 $LogContainer.Controls.Add($LogTextBox)
@@ -81,8 +82,8 @@ $DoneButton.Location = New-Object System.Drawing.Point(740, 380)
 $DoneButton.Size = New-Object System.Drawing.Size(180, 40)
 $DoneButton.BackColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
 $DoneButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-# ИСПРАВЛЕНО: принудительное приведение типа
-$DoneButton.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]1)
+# ИСПРАВЛЕНО: используем именованную константу
+$DoneButton.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold)
 $DoneButton.Visible = $false
 $DoneButton.Add_Click({ Exit-Application })
 $Form.Controls.Add($DoneButton)
@@ -117,8 +118,8 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $StatusLabel.Text = "• Ожидание"
     $StatusLabel.Location = New-Object System.Drawing.Point(400, $YOffset)
     $StatusLabel.Size = New-Object System.Drawing.Size(130, 25)
-    # ИСПРАВЛЕНО: принудительное приведение типа
-    $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]1)
+    # ИСПРАВЛЕНО: используем именованную константу
+    $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold)
     $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
     $TasksContainer.Controls.Add($StatusLabel)
     
