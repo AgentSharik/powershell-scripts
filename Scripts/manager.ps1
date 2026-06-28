@@ -114,7 +114,7 @@ $FooterLabel.Text = "Пожалуйста, не закрывайте это ок
 $FooterLabel.Location = New-Object System.Drawing.Point(20, 380)
 $FooterLabel.Size = New-Object System.Drawing.Size(595, 25)
 $FooterLabel.ForeColor = [System.Drawing.Color]::FromArgb(147, 153, 178)
-$FooterLabel.TextAlign = [System.Drawing.ContentAlignment]::ContentAlignmentCenter
+$FooterLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $Form.Controls.Add($FooterLabel)
 
 
