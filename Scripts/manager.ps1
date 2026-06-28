@@ -1,6 +1,6 @@
 # =========================================================================
 # Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
-# Режим запуска: Полное скрытие собственного окна консоли + дочерних процессов
+# Режим запуска: Полное скрытие собственного окна консоли + Живой не лагающий GUI
 # Кодировка: UTF-8 с BOM (Обязательно для корректной кириллицы)
 # =========================================================================
 
@@ -33,7 +33,7 @@ Start-Transcript -Path (Join-Path $LogDir "Main_Setup_GUI_Dispatcher.log") -Appe
 
 # --- СПИСОК ОПЕРАЦИЙ ---
 $ScriptsToRun = @(
-    @{ Name = "clean-and-photo.ps1";        Title = "Очистка системы и кэша фото";     Status = "Ожидание" },
+    @{ Name = "clean-and-photo.ps1";        Title = "Очистка sistema и кэша фото";     Status = "Ожидание" },
     @{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов"; Status = "Ожидание" },
     @{ Name = "apps-install.ps1";           Title = "Развертывание базового софта";    Status = "Ожидание" },
     @{ Name = "office-install.ps1";         Title = "Инсталляция офисного пакета";     Status = "Ожидание" }
@@ -43,7 +43,7 @@ $ScriptsToRun = @(
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = " Системная автоматизация Windows"
 $Form.Size = New-Object System.Drawing.Size(960, 480)
-$Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37) # Глубокий темный (Catppuccin Mocha Mocha)
+$Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37) 
 $Form.ForeColor = [System.Drawing.Color]::FromArgb(205, 214, 244)
 $Form.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
@@ -59,7 +59,7 @@ $Form.Controls.Add($HeaderPanel)
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
 $TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold)
-$TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) # Неоново-синий
+$TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) 
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
 $TitleLabel.AutoSize = $true
 $HeaderPanel.Controls.Add($TitleLabel)
@@ -75,7 +75,7 @@ $Form.Controls.Add($TasksContainer)
 $LogContainer = New-Object System.Windows.Forms.Panel
 $LogContainer.Location = New-Object System.Drawing.Point(580, 80)
 $LogContainer.Size = New-Object System.Drawing.Size(340, 275)
-$LogContainer.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27) # Еще более глубокий черный для контраста терминала
+$LogContainer.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27) 
 $Form.Controls.Add($LogContainer)
 
 # Тонкая неоновая полоска сверху лога для стиля
@@ -85,7 +85,7 @@ $NeonLine.Size = New-Object System.Drawing.Size(340, 3)
 $NeonLine.BackColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
 $LogContainer.Controls.Add($NeonLine)
 
-# Текстовое поле для терминального вывода
+# Текстовое поле для терминального вывода (Включен вертикальный скроллбар)
 $LogTextBox = New-Object System.Windows.Forms.RichTextBox
 $LogTextBox.Location = New-Object System.Drawing.Point(15, 15)
 $LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
@@ -94,31 +94,28 @@ $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
 $LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
 $LogTextBox.ReadOnly = $true
+$LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical # РАЗРЕШАЕМ СКРОЛЛИНГ
 $LogContainer.Controls.Add($LogTextBox)
 
-# ПРОДВИНУТАЯ СТИЛИЗОВАННАЯ ФУНКЦИЯ ЛОГА
+# СТИЛИЗОВАННАЯ ФУНКЦИЯ ЛОГА
 function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
     $Time = (Get-Date).ToString("HH:mm:ss")
     
-    # 1. Печатаем таймстамп серо-синим цветом
     $LogTextBox.SelectionStart = $LogTextBox.TextLength
     $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb(108, 112, 134)
     $LogTextBox.AppendText("[$Time] ")
 
-    # 2. Печатаем красивый префикс (например [ RUN ], [ OK ])
     $LogTextBox.SelectionStart = $LogTextBox.TextLength
     $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb($ColorRGB[0], $ColorRGB[1], $ColorRGB[2])
     $LogTextBox.AppendText("[$Prefix] ")
 
-    # 3. Печатаем само сообщение
     $LogTextBox.SelectionStart = $LogTextBox.TextLength
-    $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb(205, 214, 244) # Обычный светлый текст
+    $LogTextBox.SelectionColor = [System.Drawing.Color]::FromArgb(205, 214, 244) 
     $LogTextBox.AppendText("$Message`r`n")
     
-    # Скролл вниз
     $LogTextBox.ScrollToCaret()
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Milliseconds 150 # Эффект "живого" вывода, чтобы текст приятно бежал
+    Start-Sleep -Milliseconds 50 # Уменьшил задержку анимации для отзывчивости
 }
 
 # Отрисовка элементов задач на левой панели
@@ -182,7 +179,6 @@ $Form.Controls.Add($FooterLabel)
 $Form.Add_Shown({
     $ScriptsDir = "C:\Windows\Setup\Scripts"
     
-    # Кастомные цвета палитры RGB
     $Cyan   = @(137, 220, 235)
     $Purple = @(203, 166, 247)
     $Green  = @(166, 227, 161)
@@ -190,7 +186,6 @@ $Form.Add_Shown({
     $Yellow = @(249, 226, 175)
 
     Add-LogLine "CORE" "Запуск планировщика автоматизации..." $Cyan
-    Start-Sleep -Milliseconds 400
     
     for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
         $Script = $ScriptsToRun[$i]
@@ -202,7 +197,6 @@ $Form.Add_Shown({
         $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 220, 235)
         $CurrentActionLabel.Text = "Запуск: $($Script.Name)..."
         
-        # Интерактивный кастомный вывод
         switch ($Script.Name) {
             "clean-and-photo.ps1" {
                 Add-LogLine "TASK" "Инициализация модуля очистки" $Purple
@@ -232,7 +226,14 @@ $Form.Add_Shown({
 
         if (Test-Path $ScriptPath) {
             try {
-                $Proc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WindowStyle Hidden -Wait -PassThru
+                # ЗАПУСКАЕМ БЕЗ -WAIT (чтобы поток формы не зависал)
+                $Proc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WindowStyle Hidden -PassThru
+                
+                # ЖИВОЙ ЦИКЛ ОЖИДАНИЯ: Скрипт выполняется, но форма продолжает жить
+                while (-not $Proc.HasExited) {
+                    [System.Windows.Forms.Application]::DoEvents() # Магия: держим окно живым
+                    Start-Sleep -Milliseconds 100
+                }
                 
                 if ($Proc.ExitCode -eq 0) {
                     $Controls.StatusLabel.Text = "✓ Готово"
@@ -265,15 +266,24 @@ $Form.Add_Shown({
     Add-LogLine "DONE" "Все сценарии успешно обработаны." $Green
     Add-LogLine "POST" "Инициализация reset-setup-scripts.ps1" $Cyan
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Seconds 1.5
 
     $ResetPath = Join-Path $ScriptsDir "reset-setup-scripts.ps1"
     if (Test-Path $ResetPath) {
-        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ResetPath`"" -WindowStyle Hidden
+        $ProcReset = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ResetPath`"" -WindowStyle Hidden -PassThru
+        while (-not $ProcReset.HasExited) {
+            [System.Windows.Forms.Application]::DoEvents()
+            Start-Sleep -Milliseconds 100
+        }
     }
 
     Add-LogLine "EXIT" "Завершение работы через 3 секунды..." $Yellow
-    Start-Sleep -Seconds 3
+    
+    # Плавное ожидание перед закрытием
+    $Timeout = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($Timeout.Elapsed.TotalSeconds -lt 3) {
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 100
+    }
     $Form.Close()
 })
 
