@@ -15,9 +15,16 @@ $Form.Size = New-Object System.Drawing.Size(960, 480)
 $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None # УБИРАЕМ РАМКУ
 $Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37)
 $Form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-# Принудительное включение DoubleBuffered через рефлексию
-$DoubleBufferProperty = $Form.GetType().GetProperty("DoubleBuffered", [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic)
-$DoubleBufferProperty.SetValue($Form, $true, $null)
+# Принудительное включение DoubleBuffered (Безопасный метод)
+try {
+    $PropertyInfo = [System.Windows.Forms.Control].GetProperty("DoubleBuffered", [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic)
+    if ($PropertyInfo) {
+        $PropertyInfo.SetValue($Form, $true, $null)
+    }
+} catch {
+    # Если не удалось применить — ничего страшного, просто идем дальше
+    Write-Host "Предупреждение: Не удалось включить DoubleBuffered, интерфейс будет работать в обычном режиме." -ForegroundColor Yellow
+}
 
 # --- ЛОГИКА ПЕРЕТАСКИВАНИЯ (Драг-энд-дроп окна) ---
 $Global:MouseIsDown = $false
