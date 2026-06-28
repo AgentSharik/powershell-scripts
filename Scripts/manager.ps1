@@ -1,6 +1,6 @@
 # =========================================================================
 # Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
-# Режим: С автоматической очисткой процессов при выходе
+# Исправлено: Полное имя типа System.Drawing.FontStyle
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -10,9 +10,7 @@ $ProgressPreference    = 'SilentlyContinue'
 # --- ФУНКЦИЯ ПРИНУДИТЕЛЬНОГО ЗАВЕРШЕНИЯ ---
 function Exit-Script {
     Add-LogLine "EXIT" "Завершение работы и очистка процессов..." @(249, 226, 175)
-    # Задержка для красоты лога
     Start-Sleep -Milliseconds 500
-    # Убиваем текущий процесс PowerShell
     Stop-Process -Id $PID -Force
 }
 
@@ -51,7 +49,7 @@ $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
-$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.FontStyle]::Bold)
+$TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold) # Исправлено
 $TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) 
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
 $TitleLabel.AutoSize = $true
@@ -76,7 +74,7 @@ $LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
 $LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
 $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.FontStyle]::Bold)
+$LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
 $LogTextBox.ReadOnly = $true
 $LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
 $LogContainer.Controls.Add($LogTextBox)
@@ -124,6 +122,7 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $StatusLabel.Text = "• Ожидание"
     $StatusLabel.Location = New-Object System.Drawing.Point(400, $YOffset)
     $StatusLabel.Size = New-Object System.Drawing.Size(130, 25)
+    $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold) # Исправлено
     $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
     $TasksContainer.Controls.Add($StatusLabel)
     
