@@ -109,12 +109,13 @@ $ProgressBar.Value = 0
 $Form.Controls.Add($ProgressBar)
 
 # Нижний колонтитул
+# Нижний колонтитул
 $FooterLabel = New-Object System.Windows.Forms.Label
 $FooterLabel.Text = "Пожалуйста, не закрывайте это окно до завершения всех процессов."
 $FooterLabel.Location = New-Object System.Drawing.Point(20, 380)
 $FooterLabel.Size = New-Object System.Drawing.Size(595, 25)
 $FooterLabel.ForeColor = [System.Drawing.Color]::FromArgb(147, 153, 178)
-$FooterLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$FooterLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter # Исправлено здесь
 $Form.Controls.Add($FooterLabel)
 
 
