@@ -1,6 +1,6 @@
 # =========================================================================
 # Назначение: Модернизированный GUI Диспетчер автоматизации
-# Режим: Интерактивная кнопка "Готово" (Активируется по завершению)
+# Режим запуска: Полное скрытие консоли, живой GUI, кнопка завершения
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -20,6 +20,19 @@ if ($ConsoleHandle -ne [System.IntPtr]::Zero) { $null = $WindowManager::ShowWind
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+
+$UserProfile = $env:USERPROFILE
+$LogDir = Join-Path $UserProfile "Documents"
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
+Start-Transcript -Path (Join-Path $LogDir "Main_Setup_GUI_Dispatcher.log") -Append
+
+# --- СПИСОК ОПЕРАЦИЙ ---
+$ScriptsToRun = @(
+    @{ Name = "clean-and-photo.ps1";        Title = "Оптимизация ОС и просмотр фото";      Status = "Ожидание" },
+    @{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов";      Status = "Ожидание" },
+    @{ Name = "apps-install.ps1";           Title = "Установка софта";                     Status = "Ожидание" },
+    @{ Name = "office-install.ps1";         Title = "Установка и активация Microsoft Office"; Status = "Ожидание" }
+)
 
 # --- GUI ---
 $Form = New-Object System.Windows.Forms.Form
@@ -71,7 +84,7 @@ $LogTextBox.ReadOnly = $true
 $LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
 $LogContainer.Controls.Add($LogTextBox)
 
-# --- КНОПКА ГОТОВО (Изначально неактивная) ---
+# --- КНОПКА ГОТОВО ---
 $DoneButton = New-Object System.Windows.Forms.Button
 $DoneButton.Text = "ГОТОВО"
 $DoneButton.Location = New-Object System.Drawing.Point(740, 380)
@@ -80,11 +93,10 @@ $DoneButton.BackColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
 $DoneButton.ForeColor = [System.Drawing.Color]::FromArgb(30, 30, 46)
 $DoneButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $DoneButton.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, [System.Drawing.FontStyle]::Bold)
-$DoneButton.Enabled = $false # Кнопка неактивна
+$DoneButton.Visible = $false
 $DoneButton.Add_Click({ $Form.Close() })
 $Form.Controls.Add($DoneButton)
 
-# Логика функций
 function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
     $Time = (Get-Date).ToString("HH:mm:ss")
     $LogTextBox.SelectionStart = $LogTextBox.TextLength
@@ -99,14 +111,6 @@ function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
     $LogTextBox.ScrollToCaret()
     [System.Windows.Forms.Application]::DoEvents()
 }
-
-# Массив задач
-$ScriptsToRun = @(
-    @{ Name = "clean-and-photo.ps1";        Title = "Оптимизация ОС и просмотр фото";      Status = "Ожидание" },
-    @{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов";      Status = "Ожидание" },
-    @{ Name = "apps-install.ps1";           Title = "Установка софта";                     Status = "Ожидание" },
-    @{ Name = "office-install.ps1";         Title = "Установка и активация Microsoft Office"; Status = "Ожидание" }
-)
 
 # Отрисовка задач
 $ScriptControls = @()
@@ -178,11 +182,10 @@ $Form.Add_Shown({
         [System.Windows.Forms.Application]::DoEvents()
     }
 
-    $CurrentActionLabel.Text = "Все задачи завершены. Нажмите 'Готово'."
+    $CurrentActionLabel.Text = "Все задачи завершены."
     Add-LogLine "DONE" "Настройка окончена." $Green
-    
-    # Активируем кнопку
-    $DoneButton.Enabled = $true
+    $DoneButton.Visible = $true # Показываем кнопку в конце
 })
 
 [System.Windows.Forms.Application]::Run($Form)
+Stop-Transcript
