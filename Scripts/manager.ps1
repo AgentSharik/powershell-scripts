@@ -1,6 +1,6 @@
 # =========================================================================
-# Назначение: Модернизированный GUI Диспетчер автоматизации (Fixed)
-# Режим: Исправлены FontStyle (заменены на целочисленные значения)
+# Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
+# Исправлено: Убраны все ссылки на типы FontStyle, использованы числовые константы
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -49,7 +49,7 @@ $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
 $TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
-# ИСПОЛЬЗУЕМ 1 ВМЕСТО [System.Drawing.FontStyle]::Bold
+# ИСПОЛЬЗУЕМ 1 (Bold)
 $TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, 1) 
 $TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) 
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
@@ -75,7 +75,7 @@ $LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
 $LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
 $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-# ИСПОЛЬЗУЕМ 1 ВМЕСТО Bold
+# ИСПОЛЬЗУЕМ 1 (Bold)
 $LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, 1)
 $LogTextBox.ReadOnly = $true
 $LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
@@ -124,7 +124,7 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $StatusLabel.Text = "• Ожидание"
     $StatusLabel.Location = New-Object System.Drawing.Point(400, $YOffset)
     $StatusLabel.Size = New-Object System.Drawing.Size(130, 25)
-    # ИСПОЛЬЗУЕМ 1 ВМЕСТО Bold
+    # ИСПОЛЬЗУЕМ 1 (Bold)
     $StatusLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10, 1) 
     $StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
     $TasksContainer.Controls.Add($StatusLabel)
@@ -132,6 +132,16 @@ for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
     $ScriptControls += [PSCustomObject]@{ StatusLabel = $StatusLabel }
     $YOffset += 40
 }
+
+# Текущее действие (внизу)
+$CurrentActionLabel = New-Object System.Windows.Forms.Label
+$CurrentActionLabel.Text = "Инициализация..."
+$CurrentActionLabel.Location = New-Object System.Drawing.Point(20, 300)
+$CurrentActionLabel.Size = New-Object System.Drawing.Size(540, 25)
+# ИСПОЛЬЗУЕМ 2 (Italic)
+$CurrentActionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10, 2)
+$CurrentActionLabel.ForeColor = [System.Drawing.Color]::FromArgb(245, 194, 231)
+$Form.Controls.Add($CurrentActionLabel)
 
 $ProgressBar = New-Object System.Windows.Forms.ProgressBar
 $ProgressBar.Location = New-Object System.Drawing.Point(20, 330)
@@ -146,6 +156,7 @@ $Form.Add_Shown({
     for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
         $Script = $ScriptsToRun[$i]; $Controls = $ScriptControls[$i]; $ScriptPath = Join-Path $ScriptsDir $Script.Name
         $Controls.StatusLabel.Text = "▶ Выполняется..."
+        $CurrentActionLabel.Text = "Запуск: $($Script.Name)..."
         
         if (Test-Path $ScriptPath) {
             $Proc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WindowStyle Hidden -PassThru
@@ -155,6 +166,7 @@ $Form.Add_Shown({
         }
         $ProgressBar.Value = $i + 1
     }
+    $CurrentActionLabel.Text = "Все задачи завершены."
     Add-LogLine "DONE" "Все задачи завершены." @(166, 227, 161)
     $DoneButton.Visible = $true
 })
