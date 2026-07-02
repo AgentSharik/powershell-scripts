@@ -1,4 +1,4 @@
-﻿# =========================================================================
+# =========================================================================
 # Имя файла: office-install-full.ps1
 # Назначение: Автоматическая установка и активация Microsoft Office LTSC 2024
 # Оптимизация: Только Word, Excel, PowerPoint + Авто-KMS
@@ -8,9 +8,19 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-# =========================================================================
-# ЭТАП 1: ИНИЦИАЛИЗАЦИЯ И ЛОГИРОВАНИЕ
-# =========================================================================
+# Настройка путей
+$UserProfile = $env:USERPROFILE
+$LogDir = Join-Path $UserProfile "Documents"
+$LogFile = Join-Path $LogDir "office2024-install.log"
+
+# Функция для моментальной записи в лог
+function Write-Log {
+    param([string]$Message)
+    $Timestamp = Get-Date -Format "HH:mm:ss"
+    $LogLine = "[$Timestamp] $Message"
+    $LogLine | Out-File -FilePath $LogFile -Append -Encoding UTF8
+    Write-Host $LogLine
+}
 
 # Проверка прав Администратора
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -19,22 +29,16 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Exit
 }
 
-# Включение TLS 1.2 и 1.3 для работы с серверами Microsoft
+# Включение TLS
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor 12288
 } catch {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 }
 
-# Настройка папки логов
-$UserProfile = $env:USERPROFILE
-$LogDir = Join-Path $UserProfile "Documents"
-if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
-Start-Transcript -Path (Join-Path $LogDir "office2024-install.log") -Append
-
-Write-Host "========================================================="
-Write-Host " ЗАПУСК ПОЛНОЙ УСТАНОВКИ И АКТИВАЦИИ MICROSOFT OFFICE 2024"
-Write-Host "========================================================="
+Write-Log "========================================================="
+Write-Log " ЗАПУСК ПОЛНОЙ УСТАНОВКИ И АКТИВАЦИИ MICROSOFT OFFICE 2024"
+Write-Log "========================================================="
 
 # =========================================================================
 # ЭТАП 2: ФУНКЦИИ-ПОМОЩНИКИ
@@ -71,7 +75,7 @@ function Install-Executable {
     param([string]$Path, [string]$Arguments)
     $process = Start-Process -FilePath $Path -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -ne 0) {
-        Write-Warning "Процесс вернул код: $($process.ExitCode)"
+        Write-Log "WARNING: Процесс вернул код: $($process.ExitCode)"
     }
 }
 
@@ -84,24 +88,24 @@ try {
     if (-not (Test-Path $TempDir)) { New-Item -Path $TempDir -ItemType Directory -Force | Out-Null }
 
     # 3.1: Патч региональной блокировки
-    Write-Host "`n>>> [1/5] Обход региональных ограничений..."
+    Write-Log ">>> [1/5] Обход региональных ограничений..."
     $RegPath = "HKCU:\Software\Microsoft\Office\16.0\Common\ExperimentConfigs\Ecs"
     if (!(Test-Path $RegPath)) { New-Item -Path $RegPath -Force | Out-Null }
     Set-ItemProperty -Path $RegPath -Name "CountryCode" -Value "std::wstring|US" -Type String
 
     # 3.2: Скачивание ODT
-    Write-Host "`n>>> [2/5] Скачивание компонентов развертывания Microsoft ODT..."
+    Write-Log ">>> [2/5] Скачивание компонентов развертывания Microsoft ODT..."
     $OdtUrl = "https://download.microsoft.com/download/6c1eeb25-cf8b-41d9-8d0d-cc1dbc032140/officedeploymenttool_20026-20112.exe"
     $OdtExe = Join-Path $TempDir "odt_setup.exe"
     Download-SetupFile -Uri $OdtUrl -OutFile $OdtExe
 
     # 3.3: Распаковка ODT
-    Write-Host "`n>>> [3/5] Распаковка файлов установщика..."
+    Write-Log ">>> [3/5] Распаковка файлов установщика..."
     Install-Executable -Path $OdtExe -Arguments "/extract:`"$TempDir`" /quiet"
     Start-Sleep -Seconds 2
 
-    # 3.4: Генерация XML (Конфигурация без BOM-байтов)
-    Write-Host "`n>>> [4/5] Создание конфигурационного файла (Только Word, Excel, PowerPoint)..."
+    # 3.4: Генерация XML
+    Write-Log ">>> [4/5] Создание конфигурационного файла..."
     $XmlContent = @"
 <Configuration>
   <Add OfficeClientEdition="64" Channel="PerpetualVL2024">
@@ -125,14 +129,14 @@ try {
     $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($XmlPath, $XmlContent, $Utf8NoBom)
 
-    # 3.5: Запуск фоновой установки Office
-    Write-Host "`n>>> [5/5] Запуск установки финальной версии Office 2024 LTSC..."
-    Write-Host "Внимание: Идет скачивание файлов напрямую с серверов Microsoft. Подождите..."
+    # 3.5: Запуск фоновой установки
+    Write-Log ">>> [5/5] Запуск установки финальной версии Office 2024 LTSC..."
+    Write-Log "Внимание: Идет скачивание файлов напрямую с серверов Microsoft. Подождите..."
     $SetupPath = Join-Path $TempDir "setup.exe"
     
     if (Test-Path $SetupPath) {
         Install-Executable -Path $SetupPath -Arguments "/configure `"$XmlPath`""
-        Write-Host ">>> Установка файлов завершена."
+        Write-Log ">>> Установка файлов завершена."
     } else {
         throw "Критическая ошибка: setup.exe не найден."
     }
@@ -140,38 +144,30 @@ try {
     # =========================================================================
     # АВТОМАТИЧЕСКАЯ НАСТРОЙКА АКТИВАЦИИ (KMS)
     # =========================================================================
-    Write-Host "`n>>> [Активация] Подключение к удаленному серверу лицензирования..."
+    Write-Log ">>> [Активация] Подключение к удаленному серверу лицензирования..."
     
-    # Проверяем стандартный путь установки Office (64-бит)
     $OfficePath = "C:\Program Files\Microsoft Office\Office16"
     if (Test-Path $OfficePath) {
         Set-Location -Path $OfficePath
-        
-        # Задаем адрес публичного KMS-сервера
-        Write-Host "Привязка KMS-сервера: kms.digiboy.ir..."
+        Write-Log "Привязка KMS-сервера: kms.digiboy.ir..."
         cscript ospp.vbs /sethst:kms.digiboy.ir | Out-Null
         
-        # Отправляем запрос на немедленную активацию
-        Write-Host "Отправка запроса на активацию..."
-        cscript ospp.vbs /act
+        Write-Log "Отправка запроса на активацию..."
+        cscript ospp.vbs /act | Out-Null
+        Write-Log ">>> Запрос на активацию отправлен."
     } else {
-        Write-Warning "Папка программы не найдена, пропуск шага автоматической активации."
+        Write-Log "WARNING: Папка программы не найдена, пропуск шага активации."
     }
 
 } catch {
-    Write-Warning "Произошел сбой: $($_.Exception.Message)"
+    Write-Log "ERROR: Произошел сбой: $($_.Exception.Message)"
 } finally {
-    # Очистка временных файлов
-    Write-Host "`n>>> Очистка временного мусора установки..."
+    Write-Log ">>> Очистка временного мусора установки..."
     if (Test-Path $TempDir) {
         Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
-# =========================================================================
-# ЭТАП 4: ЗАВЕРШЕНИЕ РАБОТЫ
-# =========================================================================
-Write-Host "`n========================================================="
-Write-Host " ВСЕ ЭТАПЫ ВЫПОЛНЕНЫ. ЗАКРЫТИЕ ЛОГА."
-Write-Host "========================================================="
-Stop-Transcript
+Write-Log "========================================================="
+Write-Log " ВСЕ ЭТАПЫ ВЫПОЛНЕНЫ."
+Write-Log "========================================================="
