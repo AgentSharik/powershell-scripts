@@ -1,6 +1,7 @@
 # =========================================================================
 # Назначение: Модернизированный GUI Диспетчер автоматизации (Cyberpunk UI)
 # Режим запуска: Полное скрытие собственного окна консоли + Живой не лагающий GUI
+# Добавлено: АВТОМАТИЧЕСКИЙ ПЕРЕХВАТ ЛОГОВ ВСЕХ ДОЧЕРНИХ СКРИПТОВ
 # Кодировка: UTF-8 с BOM (Обязательно для корректной кириллицы)
 # =========================================================================
 
@@ -25,13 +26,14 @@ if ($ConsoleHandle -ne [System.IntPtr]::Zero) {
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Настройка логирования
+# Настройка путей
 $UserProfile = $env:USERPROFILE
 $LogDir = Join-Path $UserProfile "Documents"
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Force -Path $LogDir | Out-Null }
 Start-Transcript -Path (Join-Path $LogDir "Main_Setup_GUI_Dispatcher.log") -Append
 
 # --- СПИСОК ОПЕРАЦИЙ ---
+# Имена логов здесь больше не нужны! Программа сама найдет свежий лог в папке Documents.
 $ScriptsToRun = @(
     @{ Name = "clean-and-photo.ps1";        Title = "Оптимизация ОС и просмотр фото";      Status = "Ожидание" },
     @{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов"; Status = "Ожидание" },
@@ -42,7 +44,7 @@ $ScriptsToRun = @(
 # --- СОЗДАНИЕ И СТИЛИЗАЦИЯ GUI ИНТЕРФЕЙСА (DARK MODE) ---
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = " Системная автоматизация Windows"
-$Form.Size = New-Object System.Drawing.Size(960, 480)
+$Form.Size = New-Object System.Drawing.Size(1040, 480)
 $Form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 37) 
 $Form.ForeColor = [System.Drawing.Color]::FromArgb(205, 214, 244)
 $Form.Font = New-Object System.Drawing.Font("Segoe UI", 10)
@@ -52,7 +54,7 @@ $Form.MaximizeBox = $false
 
 # Шапка (Заголовок)
 $HeaderPanel = New-Object System.Windows.Forms.Panel
-$HeaderPanel.Size = New-Object System.Drawing.Size(960, 60)
+$HeaderPanel.Size = New-Object System.Drawing.Size(1040, 60)
 $HeaderPanel.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 46)
 $Form.Controls.Add($HeaderPanel)
 
@@ -74,33 +76,32 @@ $Form.Controls.Add($TasksContainer)
 # --- ПРАВАЯ СТИЛИЗОВАННАЯ КИБЕРПАНК-ПАНЕЛЬ ЛОГА ---
 $LogContainer = New-Object System.Windows.Forms.Panel
 $LogContainer.Location = New-Object System.Drawing.Point(580, 80)
-$LogContainer.Size = New-Object System.Drawing.Size(340, 275)
+$LogContainer.Size = New-Object System.Drawing.Size(420, 275) 
 $LogContainer.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27) 
 $Form.Controls.Add($LogContainer)
 
 # Тонкая неоновая полоска сверху лога для стиля
 $NeonLine = New-Object System.Windows.Forms.Panel
 $NeonLine.Location = New-Object System.Drawing.Point(0, 0)
-$NeonLine.Size = New-Object System.Drawing.Size(340, 3)
+$NeonLine.Size = New-Object System.Drawing.Size(420, 3)
 $NeonLine.BackColor = [System.Drawing.Color]::FromArgb(137, 180, 250)
 $LogContainer.Controls.Add($NeonLine)
 
-# Текстовое поле для терминального вывода (Включен вертикальный скроллбар)
+# Текстовое поле для терминального вывода
 $LogTextBox = New-Object System.Windows.Forms.RichTextBox
 $LogTextBox.Location = New-Object System.Drawing.Point(15, 15)
-$LogTextBox.Size = New-Object System.Drawing.Size(310, 245)
+$LogTextBox.Size = New-Object System.Drawing.Size(390, 245)
 $LogTextBox.BackColor = [System.Drawing.Color]::FromArgb(17, 17, 27)
 $LogTextBox.ForeColor = [System.Drawing.Color]::FromArgb(166, 173, 200)
 $LogTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::None
 $LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9.5, [System.Drawing.FontStyle]::Bold)
 $LogTextBox.ReadOnly = $true
-$LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical # РАЗРЕШАЕМ СКРОЛЛИНГ
+$LogTextBox.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
 $LogContainer.Controls.Add($LogTextBox)
 
 # СТИЛИЗОВАННАЯ ФУНКЦИЯ ЛОГА
 function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
     $Time = (Get-Date).ToString("HH:mm:ss")
-
     Write-Output "[$Time] [$Prefix] $Message"
     
     $LogTextBox.SelectionStart = $LogTextBox.TextLength
@@ -117,7 +118,6 @@ function Add-LogLine ($Prefix, $Message, $ColorRGB = @(166, 173, 200)) {
     
     $LogTextBox.ScrollToCaret()
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Milliseconds 50 # Уменьшил задержку анимации для отзывчивости
 }
 
 # Отрисовка элементов задач на левой панели
@@ -187,72 +187,129 @@ $Form.Add_Shown({
     $Red    = @(243, 139, 168)
     $Yellow = @(249, 226, 175)
 
-    Add-LogLine "CORE" "Запуск планировщика автоматизации..." $Cyan
+    Add-LogLine "CORE" "Запуск планировщика..." $Cyan
     
     for ($i = 0; $i -lt $ScriptsToRun.Count; $i++) {
         $Script = $ScriptsToRun[$i]
         $Controls = $ScriptControls[$i]
         $ScriptPath = Join-Path $ScriptsDir $Script.Name
 
-        # Статус на "Выполняется"
         $Controls.StatusLabel.Text = "▶ Выполняется..."
         $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 220, 235)
         $CurrentActionLabel.Text = "Запуск: $($Script.Name)..."
         
         switch ($Script.Name) {
-            "clean-and-photo.ps1" {
-                Add-LogLine "TASK" "Оптимизация ОС и настройка фото" $Purple
-                Add-LogLine "UWP " "Удаление предустановленных приложений (мусора)"
-                Add-LogLine "CACH" "Очистка временных файлов и логов системы"
-                Add-LogLine "CONF" "Настройка средства просмотра фотографий"
-            }
-            "install-sys-components.ps1" {
-                Add-LogLine "TASK" "Установка системных компонентов" $Purple
-                Add-LogLine "SYS " "Интеграция базовых библиотек Windows"
-                Add-LogLine "VCPP" "Установка пакетов Visual C++ Redistributable"
-            }
-            "apps-install.ps1" {
-                Add-LogLine "TASK" "Установка программного обеспечения" $Purple
-                Add-LogLine "INST" "Тихая инсталляция софта в фоновом режиме"
-                Add-LogLine "CONF" "Применение пользовательских настроек"
-            }
-            "office-install.ps1" {
-                Add-LogLine "TASK" "Развертывание Microsoft Office" $Purple
-                Add-LogLine "INST" "Фоновая установка пакета Office 2024 LTSC"
-                Add-LogLine "KEY " "Интеграция корпоративного ключа (GVLK)"
-                Add-LogLine "ACTV" "Подтверждение локальной активации продукта"
-            }
+            "clean-and-photo.ps1"        { Add-LogLine "TASK" "Запуск оптимизации ОС" $Purple }
+            "install-sys-components.ps1" { Add-LogLine "TASK" "Настройка компонентов" $Purple }
+            "apps-install.ps1"           { Add-LogLine "TASK" "Установка ПО" $Purple }
+            "office-install.ps1"         { Add-LogLine "TASK" "Установка Office" $Purple }
         }
 
         if (Test-Path $ScriptPath) {
             try {
-                # ЗАПУСКАЕМ БЕЗ -WAIT (чтобы поток формы не зависал)
+                # Запоминаем время ПЕРЕД запуском скрипта
+                $StartTime = (Get-Date).AddSeconds(-2) 
+
                 $Proc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WindowStyle Hidden -PassThru
                 
-                # ЖИВОЙ ЦИКЛ ОЖИДАНИЯ: Скрипт выполняется, но форма продолжает жить
+                # --- УМНЫЙ АВТО-ПЕРЕХВАТ ЛОГОВ ---
+                $FileStream = $null
+                $StreamReader = $null
+                $ChildLogPath = $null
+                
                 while (-not $Proc.HasExited) {
-                    [System.Windows.Forms.Application]::DoEvents() # Магия: держим окно живым
-                    Start-Sleep -Milliseconds 100
+                    [System.Windows.Forms.Application]::DoEvents()
+                    Start-Sleep -Milliseconds 150
+                    
+                    # 1. Если лог еще не найден, ищем самый свежий .log или .txt в папке Documents
+                    if ($null -eq $ChildLogPath) {
+                        $LatestLog = Get-ChildItem -Path $LogDir -File | 
+                                     Where-Object { ($_.Extension -eq '.log' -or $_.Extension -eq '.txt') -and ($_.LastWriteTime -ge $StartTime -or $_.CreationTime -ge $StartTime) } | 
+                                     Sort-Object LastWriteTime -Descending | 
+                                     Select-Object -First 1
+                                     
+                        if ($LatestLog) {
+                            $ChildLogPath = $LatestLog.FullName
+                        }
+                    }
+
+                    # 2. Если файл нашли, подключаемся к нему для чтения в реальном времени
+                    if (($null -ne $ChildLogPath) -and (Test-Path $ChildLogPath) -and ($null -eq $FileStream)) {
+                        try {
+                            $FileStream = New-Object System.IO.FileStream($ChildLogPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+                            $StreamReader = New-Object System.IO.StreamReader($FileStream, $true)
+                        } catch { } # Игнорируем блокировки системы
+                    }
+
+                    # 3. Читаем новые строки и фильтруем системный мусор PowerShell
+                    if ($null -ne $StreamReader) {
+                        while (-not $StreamReader.EndOfStream) {
+                            $Line = $StreamReader.ReadLine().Trim()
+                            
+                            $IsGarbage = ($Line -match "^\*+$") -or 
+                                         ($Line -match "^Время (начала|окончания)") -or 
+                                         ($Line -match "^Имя (пользователя|конфигурации)") -or
+                                         ($Line -match "^Запуск от имени") -or
+                                         ($Line -match "^Компьютер:") -or
+                                         ($Line -match "^Ведущее приложение:") -or
+                                         ($Line -match "^ИД процесса:") -or
+                                         ($Line -match "^PS.+Version") -or
+                                         ($Line -match "^BuildVersion") -or
+                                         ($Line -match "^CLRVersion") -or
+                                         ($Line -match "^WSManStackVersion") -or
+                                         ($Line -match "^SerializationVersion") -or
+                                         ($Line -match "^Транскрибирование ") -or
+                                         ($Line -match "^Начало записи сценария") -or
+                                         ($Line -match "^Конец записи протокола")
+
+                            if (-not $IsGarbage -and $Line -ne "") {
+                                # Умная раскраска строк
+                                $LineColor = @(166, 173, 200) # Серый (дефолт)
+                                $Prefix = "INFO"
+                                
+                                if ($Line -match "^>>>") {
+                                    $Prefix = "STEP"
+                                    $LineColor = @(137, 220, 235) # Голубой
+                                } elseif ($Line -match "^===") {
+                                    $Prefix = "HEAD"
+                                    $LineColor = @(203, 166, 247) # Фиолетовый
+                                } elseif ($Line -match "(?i)успешно") {
+                                     $Prefix = " OK "
+                                     $LineColor = @(166, 227, 161) # Зеленый
+                                } elseif ($Line -match "(?i)ошибка|сбой") {
+                                     $Prefix = "FAIL"
+                                     $LineColor = @(243, 139, 168) # Красный
+                                }
+
+                                Add-LogLine $Prefix $Line $LineColor
+                            }
+                        }
+                    }
                 }
+                
+                # Освобождаем файл, чтобы другие процессы могли с ним работать
+                if ($null -ne $StreamReader) { $StreamReader.Close(); $StreamReader.Dispose() }
+                if ($null -ne $FileStream) { $FileStream.Close(); $FileStream.Dispose() }
+                # ----------------------------------------------
                 
                 if ($Proc.ExitCode -eq 0) {
                     $Controls.StatusLabel.Text = "✓ Готово"
                     $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 227, 161)
-                    Add-LogLine " OK " "Модуль завершен успешно." $Green
+                    Add-LogLine " OK " "Модуль завершен." $Green
                 } else {
                     $Controls.StatusLabel.Text = "✗ Сбой (Код: $($Proc.ExitCode))"
                     $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(243, 139, 168)
-                    Add-LogLine "FAIL" "Код возврата ошибки: $($Proc.ExitCode)" $Red
+                    Add-LogLine "FAIL" "Ошибка (Код: $($Proc.ExitCode))" $Red
                 }
             } catch {
                 $Controls.StatusLabel.Text = "✗ Ошибка"
                 $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(243, 139, 168)
-                Add-LogLine "ERR " "Критическое исключение потока!" $Red
+                Add-LogLine "ERR " "Критическая ошибка!" $Red
             }
         } else {
             $Controls.StatusLabel.Text = "⚠ Отсутствует"
             $Controls.StatusLabel.ForeColor = [System.Drawing.Color]::FromArgb(249, 226, 175)
-            Add-LogLine "WARN" "Файл скрипта не найден на диске!" $Yellow
+            Add-LogLine "WARN" "Файл не найден!" $Yellow
         }
 
         $ProgressBar.Value = $i + 1
@@ -263,8 +320,8 @@ $Form.Add_Shown({
     $CurrentActionLabel.Text = "Финальная зачистка временных директорий..."
     $CurrentActionLabel.ForeColor = [System.Drawing.Color]::FromArgb(166, 227, 161)
     
-    Add-LogLine "DONE" "Все сценарии успешно обработаны." $Green
-    Add-LogLine "POST" "Инициализация reset-setup-scripts.ps1" $Cyan
+    Add-LogLine "DONE" "Все процессы завершены." $Green
+    Add-LogLine "POST" "Очистка скриптов..." $Cyan
     [System.Windows.Forms.Application]::DoEvents()
 
     $ResetPath = Join-Path $ScriptsDir "reset-setup-scripts.ps1"
@@ -276,9 +333,8 @@ $Form.Add_Shown({
         }
     }
 
-    Add-LogLine "EXIT" "Завершение работы через 3 секунды..." $Yellow
+    Add-LogLine "EXIT" "Закрытие (3 сек)..." $Yellow
     
-    # Плавное ожидание перед закрытием
     $Timeout = [System.Diagnostics.Stopwatch]::StartNew()
     while ($Timeout.Elapsed.TotalSeconds -lt 3) {
         [System.Windows.Forms.Application]::DoEvents()
