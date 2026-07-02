@@ -223,7 +223,6 @@ $Form.Add_Shown({
                 Add-LogLine "ACTV" "Подтверждение локальной активации продукта"
             }
         }
-        }
 
         if (Test-Path $ScriptPath) {
             try {
