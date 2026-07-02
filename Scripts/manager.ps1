@@ -33,10 +33,10 @@ Start-Transcript -Path (Join-Path $LogDir "Main_Setup_GUI_Dispatcher.log") -Appe
 
 # --- СПИСОК ОПЕРАЦИЙ ---
 $ScriptsToRun = @(
-    @{ Name = "clean-and-photo.ps1";        Title = "Очистка sistema и кэша фото";     Status = "Ожидание" },
+    @{ Name = "clean-and-photo.ps1";        Title = "Оптимизация ОС и просмотр фото";      Status = "Ожидание" },
     @{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов"; Status = "Ожидание" },
-    @{ Name = "apps-install.ps1";           Title = "Развертывание базового софта";    Status = "Ожидание" },
-    @{ Name = "office-install.ps1";         Title = "Инсталляция офисного пакета";     Status = "Ожидание" }
+    @{ Name = "apps-install.ps1";           Title = "Установка софта";                 Status = "Ожидание" },
+    @{ Name = "office-install.ps1";         Title = "Установка и активация Microsoft Office"; Status = "Ожидание" }
 )
 
 # --- СОЗДАНИЕ И СТИЛИЗАЦИЯ GUI ИНТЕРФЕЙСА (DARK MODE) ---
@@ -57,7 +57,7 @@ $HeaderPanel.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 46)
 $Form.Controls.Add($HeaderPanel)
 
 $TitleLabel = New-Object System.Windows.Forms.Label
-$TitleLabel.Text = "WINDOWS OS DEPLOYMENT MANAGER"
+$TitleLabel.Text = "МЕНЕДЖЕР АВТОМАТИЧЕСКОЙ НАСТРОЙКИ"
 $TitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 14, [System.Drawing.FontStyle]::Bold)
 $TitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(137, 180, 250) 
 $TitleLabel.Location = New-Object System.Drawing.Point(20, 15)
@@ -201,29 +201,28 @@ $Form.Add_Shown({
         
         switch ($Script.Name) {
             "clean-and-photo.ps1" {
-                Add-LogLine "TASK" "Инициализация модуля очистки" $Purple
-                Add-LogLine "UWP"  "Уничтожение мусорных Win10/11 приложений"
-                Add-LogLine "CACH" "Очистка системных дампов, логов и кэша"
-                Add-LogLine "OPT"  "Оптимизация базы данных кэша фотографий"
+                Add-LogLine "TASK" "Оптимизация ОС и настройка фото" $Purple
+                Add-LogLine "UWP " "Удаление предустановленных приложений (мусора)"
+                Add-LogLine "CACH" "Очистка временных файлов и логов системы"
+                Add-LogLine "CONF" "Настройка средства просмотра фотографий"
             }
             "install-sys-components.ps1" {
-                Add-LogLine "TASK" "Развертывание компонентов среды" $Purple
-                Add-LogLine "NET"  "Включение .NET Framework 3.5 и 4.8"
-                Add-LogLine "DX32" "Инсталляция библиотек DirectX / Vulkan"
-                Add-LogLine "VCPP" "Обновление рантаймов Microsoft VC++ (2005-2022)"
+                Add-LogLine "TASK" "Установка системных компонентов" $Purple
+                Add-LogLine "SYS " "Интеграция базовых библиотек Windows"
+                Add-LogLine "VCPP" "Установка пакетов Visual C++ Redistributable"
             }
             "apps-install.ps1" {
-                Add-LogLine "TASK" "Развертывание пользовательского ПО" $Purple
-                Add-LogLine "WING" "Подключение пакетного менеджера"
-                Add-LogLine "WEBB" "Тихая установка Google Chrome (Стабильный)"
-                Add-LogLine "UTIL" "Развертывание базовых утилит архитектуры"
+                Add-LogLine "TASK" "Установка программного обеспечения" $Purple
+                Add-LogLine "INST" "Тихая инсталляция софта в фоновом режиме"
+                Add-LogLine "CONF" "Применение пользовательских настроек"
             }
             "office-install.ps1" {
-                Add-LogLine "TASK" "Развертывание офисного пакета" $Purple
-                Add-LogLine "DISC" "Монтирование дистрибутива MS Office"
-                Add-LogLine "EXEC" "Принудительный silent-монтаж пакета"
-                Add-LogLine "ACTV" "Инъекция лицензии и активация через KMS"
+                Add-LogLine "TASK" "Развертывание Microsoft Office" $Purple
+                Add-LogLine "INST" "Фоновая установка пакета Office 2024 LTSC"
+                Add-LogLine "KEY " "Интеграция корпоративного ключа (GVLK)"
+                Add-LogLine "ACTV" "Подтверждение локальной активации продукта"
             }
+        }
         }
 
         if (Test-Path $ScriptPath) {
