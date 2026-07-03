@@ -20,7 +20,6 @@ try {
     Write-Host ">>> Начало очистки встроенного мусора..."
 
     # Список масок приложений, которые нужно УДАЛИТЬ БЕЗЖАЛОСТНО
-    # Магазин, Калькулятор, Заметки, Блокнот, Фото, Медиаплеер, Paint 3D и Xbox НЕ ТРОГАЕМ
     $BloatList = @(
         "Yandex.Music",                 # Превентивное удаление Яндекс.Музыки
         "Microsoft.ZuneMusic",          # Музыка Groove (Groove Music) - СНОСИМ!
@@ -100,7 +99,7 @@ try {
     Write-Host ">>> Просмотр фотографий успешно настроен по умолчанию!"
 
     # ----------------------------------------------------
-    # ЭТАП 3: ОПТИМИЗАЦИЯ ФАЙЛА ПОДКАЧКИ
+    # ЭТАП 3: ОПТИМИЗАЦИЯ ФАЙЛА ПОДКАЧКИ (ЧЕРЕЗ РЕЕСТР)
     # ----------------------------------------------------
     Write-Host ">>> Проверка ОЗУ и конфигурация файла подкачки..."
     
@@ -110,24 +109,17 @@ try {
     # Снимаем галочку "Автоматически выбирать объем файла подкачки"
     Set-CimInstance -Query "Select * from Win32_ComputerSystem" -Property @{ AutomaticManagedPagefile = $False }
 
+    $RegPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
+
     if ($RAM_KB -ge $Threshold_KB) {
         Write-Host "RAM >= 32GB. Полное отключение файла подкачки (Pagefile)..."
-        # Удаляем существующие файлы подкачки
-        Get-CimInstance Win32_PageFileSetting | Remove-CimInstance -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $RegPath -Name "PagingFiles" -Value @("") -Type MultiString -Force
     } else {
         Write-Host "RAM <= 31GB. Установка фиксированного файла подкачки размером 8 ГБ..."
-        
-        # Очищаем старые настройки, чтобы избежать дублирования
-        Get-CimInstance Win32_PageFileSetting | Remove-CimInstance -ErrorAction SilentlyContinue
-        
-        # Создаем новый файл подкачки на диске C: с жестким приведением к [uint32]
-        New-CimInstance -ClassName Win32_PageFileSetting -Property @{
-            Name        = 'C:\pagefile.sys'
-            InitialSize = [uint32]8192
-            MaximumSize = [uint32]8192
-        } | Out-Null
+        $PageFileString = "C:\pagefile.sys 8192 8192"
+        Set-ItemProperty -Path $RegPath -Name "PagingFiles" -Value @($PageFileString) -Type MultiString -Force
     }
-    Write-Host ">>> Конфигурация памяти завершена успешно!"
+    Write-Host ">>> Конфигурация памяти завершена успешно! Изменения вступят в силу после перезагрузки ПК."
 
 } catch {
     Write-Warning "Ошибка во время оптимизации: $($_.Exception.Message)"
