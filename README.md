@@ -61,6 +61,8 @@
     Скрипт "уборки". Удаляет временные инсталляторы, очищает кэш и **полностью удаляет саму папку `Scripts`** с диска, оставляя систему в идеальном порядке перед финальной перезагрузкой ПК.
 
 ---
-*Скриншот интерфейса менеджера автоматизации:*
-
-<img width="576" height="476" alt="ctUjYOBXyx" src="https://github.com/user-attachments/assets/5636952b-2290-4d1b-8c3f-fc5c5efb0251" />
+<div align="center">
+  <i>Скриншот интерфейса менеджера автоматизации:</i>
+  <br><br>
+  <img width="576" height="476" alt="ctUjYOBXyx" src="https://github.com/user-attachments/assets/5636952b-2290-4d1b-8c3f-fc5c5efb0251" />
+</div>
