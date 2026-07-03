@@ -235,24 +235,6 @@ try {
     Write-Warning "Не удалось установить K-Lite Codec Pack: $($_.Exception.Message)"
 }
 
-# --- 3.7: RMS Host ---
-try {
-    Write-Host "`n>>> [7/7] Установка RMS Host..."
-    $RmsUri  = 'https://www.remoteutilities.com/download/rutserv.x64.msi'
-    $RmsFile = Join-Path $env:TEMP 'rutserv.x64.msi'
-
-    Write-Host "Скачивание официального дистрибутива RMS Host..."
-    Download-SetupFile -Uri $RmsUri -OutFile $RmsFile -ExpectedHash $null
-
-    Write-Host "Запуск тихой установки пакета..."
-    Install-MsiPackage -Path $RmsFile
-
-    Remove-Item $RmsFile -Force -ErrorAction SilentlyContinue
-    Write-Host ">>> RMS Host установлен успешно."
-} catch {
-    Write-Warning "Не удалось установить RMS Host: $($_.Exception.Message)"
-}
-
 # =========================================================================
 # ЭТАП 4: ЗАВЕРШЕНИЕ РАБОТЫ
 # =========================================================================
