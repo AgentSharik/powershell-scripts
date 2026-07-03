@@ -30,4 +30,5 @@
 
 ---
 *Скриншот интерфейса менеджера автоматизации:*
+
 <img width="576" height="476" alt="ctUjYOBXyx" src="https://github.com/user-attachments/assets/4890479b-cc62-4908-a951-b8a4718f6715" />
