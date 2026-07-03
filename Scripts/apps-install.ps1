@@ -1,6 +1,6 @@
 # =========================================================================
 # Имя файла: apps-install.ps1
-# Назначение: Абсолютно надежная установка базового софта + qBittorrent, ShareX, K-Lite
+# Назначение: Абсолютно надежная установка базового софта + qBittorrent, ShareX, K-Lite, RMS Host
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -105,7 +105,7 @@ function Install-MsiPackage {
 
 # --- 3.1: Google Chrome Enterprise (MSI) ---
 try {
-    Write-Host "`n>>> [1/6] Установка Google Chrome..."
+    Write-Host "`n>>> [1/7] Установка Google Chrome..."
     $ChromeUri  = 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi'
     $ChromeFile = Join-Path $env:TEMP 'GoogleChromeEnterprise.msi'
     
@@ -123,7 +123,7 @@ try {
 
 # --- 3.2: Steam Client (EXE) ---
 try {
-    Write-Host "`n>>> [2/6] Установка Steam..."
+    Write-Host "`n>>> [2/7] Установка Steam..."
     $SteamUri  = 'https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe'
     $SteamFile = Join-Path $env:TEMP 'SteamSetup.exe'
     
@@ -133,15 +133,24 @@ try {
     Write-Host "Запуск тихой установки с ключом /S..."
     Install-Executable -Path $SteamFile -Arguments '/S'
     
+    Write-Host "Перевод автозапуска Steam в состояние 'Отключено' в Диспетчере задач..."
+    # Обращаемся к ветке StartupApproved, которая контролирует статус элементов автозагрузки
+    $StartupApprovedPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
+    if (-not (Test-Path $StartupApprovedPath)) { New-Item -Path $StartupApprovedPath -Force | Out-Null }
+    
+    # Массив байтов, где 0x03 в начале означает, что элемент отключен
+    $DisabledValue = [byte[]](0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+    Set-ItemProperty -Path $StartupApprovedPath -Name "Steam" -Value $DisabledValue -Type Binary -Force
+    
     Remove-Item $SteamFile -Force -ErrorAction SilentlyContinue
-    Write-Host ">>> Steam установлен успешно."
+    Write-Host ">>> Steam установлен успешно (сохранен в автозагрузке, но выключен)."
 } catch {
     Write-Warning "Не удалось установить Steam: $($_.Exception.Message)"
 }
 
 # --- 3.3: WinRAR (Официальная русская x64 версия) ---
 try {
-    Write-Host "`n>>> [3/6] Установка WinRAR RU..."
+    Write-Host "`n>>> [3/7] Установка WinRAR RU..."
     $WinRarUri  = 'https://www.rarlab.com/rar/winrar-x64-701ru.exe'
     $WinRarFile = Join-Path $env:TEMP 'winrar-x64-ru.exe'
     
@@ -164,7 +173,7 @@ try {
 
 # --- 3.4: qBittorrent (Прямая ссылка на релиз 5.2.2 с libtorrent 1.2.x) ---
 try {
-    Write-Host "`n>>> [4/6] Установка qBittorrent (libtorrent 1.2.x)..."
+    Write-Host "`n>>> [4/7] Установка qBittorrent (libtorrent 1.2.x)..."
     $qbUri  = 'https://github.com/qbittorrent/qBittorrent/releases/download/release-5.2.2/qbittorrent_5.2.2_x64_setup.exe'
     $qbFile = Join-Path $env:TEMP 'qbittorrent_setup.exe'
     
@@ -185,7 +194,7 @@ try {
 
 # --- 3.5: ShareX (v20.2.0 с ключом подавления автозапуска и принудительным киллом) ---
 try {
-    Write-Host "`n>>> [5/6] Установка ShareX..."
+    Write-Host "`n>>> [5/7] Установка ShareX..."
     $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe'
     $sharexFile = Join-Path $env:TEMP 'sharex_setup.exe'
     
@@ -193,14 +202,12 @@ try {
     Download-SetupFile -Uri $sharexUri -OutFile $sharexFile -ExpectedHash $null
     
     Write-Host "Запуск тихой установки с подавлением автозапуска (/SP-)..."
-    # Добавлен ключ /SP-, чтобы установщик Inno Setup не открывал программу в конце
     Start-Process -FilePath $sharexFile -ArgumentList '/VERYSILENT /NORESTART /MERGETASKS=!desktopicon /SP-' -NoNewWindow
     
     Write-Host "Ожидаем 20 секунд для завершения установки ShareX..."
     Start-Sleep -Seconds 30
     
     Write-Host "Принудительное завершение процессов ShareX для избежания зависаний..."
-    # На всякий случай жестко прибиваем процессы, если они еще висят
     Stop-Process -Name "ShareX-20.2.0-setup-x64" -Force -ErrorAction SilentlyContinue
     Stop-Process -Name "ShareX" -Force -ErrorAction SilentlyContinue
     
@@ -212,7 +219,7 @@ try {
 
 # --- 3.6: K-Lite Codec Pack Mega ---
 try {
-    Write-Host "`n>>> [6/6] Установка K-Lite Codec Pack Mega..."
+    Write-Host "`n>>> [6/7] Установка K-Lite Codec Pack Mega..."
     $KLiteUri  = 'https://files2.codecguide.com/K-Lite_Codec_Pack_1975_Mega.exe'
     $KLiteFile = Join-Path $env:TEMP 'klite_setup.exe'
     
@@ -228,10 +235,28 @@ try {
     Write-Warning "Не удалось установить K-Lite Codec Pack: $($_.Exception.Message)"
 }
 
+# --- 3.7: RMS Host ---
+try {
+    Write-Host "`n>>> [7/7] Установка RMS Host..."
+    $RmsUri  = 'https://www.remoteutilities.com/download/rutserv.x64.msi'
+    $RmsFile = Join-Path $env:TEMP 'rutserv.x64.msi'
+
+    Write-Host "Скачивание официального дистрибутива RMS Host..."
+    Download-SetupFile -Uri $RmsUri -OutFile $RmsFile -ExpectedHash $null
+
+    Write-Host "Запуск тихой установки пакета..."
+    Install-MsiPackage -Path $RmsFile
+
+    Remove-Item $RmsFile -Force -ErrorAction SilentlyContinue
+    Write-Host ">>> RMS Host установлен успешно."
+} catch {
+    Write-Warning "Не удалось установить RMS Host: $($_.Exception.Message)"
+}
+
 # =========================================================================
 # ЭТАП 4: ЗАВЕРШЕНИЕ РАБОТЫ
 # =========================================================================
 Write-Host "`n========================================================="
-Write-Host " ВСЕ ЭТАПЫ ВЫПОЛНЕНИЫ. ЗАКРЫТИЕ ЛОГА."
+Write-Host " ВСЕ ЭТАПЫ ВЫПОЛНЕНЫ. ЗАКРЫТИЕ ЛОГА."
 Write-Host "========================================================="
 Stop-Transcript
