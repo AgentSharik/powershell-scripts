@@ -1,6 +1,6 @@
 # =========================================================================
 # Имя файла: clean-and-photo.ps1
-# Назначение: Очистка системы и активация классического Photo Viewer
+# Назначение: Очистка системы, настройка Photo Viewer и оптимизация файла подкачки
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -98,6 +98,36 @@ try {
     Set-ItemProperty -Path "HKLM:\SOFTWARE\RegisteredApplications" -Name "Windows Photo Viewer" -Value "SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities" -Force
     
     Write-Host ">>> Просмотр фотографий успешно настроен по умолчанию!"
+
+    # ----------------------------------------------------
+    # ЭТАП 3: ОПТИМИЗАЦИЯ ФАЙЛА ПОДКАЧКИ
+    # ----------------------------------------------------
+    Write-Host ">>> Проверка ОЗУ и конфигурация файла подкачки..."
+    
+    $RAM_KB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize
+    $Threshold_KB = 32505856
+
+    # Снимаем галочку "Автоматически выбирать объем файла подкачки"
+    Set-CimInstance -Query "Select * from Win32_ComputerSystem" -Property @{ AutomaticManagedPagefile = $False }
+
+    if ($RAM_KB -ge $Threshold_KB) {
+        Write-Host "RAM >= 32GB. Полное отключение файла подкачки (Pagefile)..."
+        # Удаляем существующие файлы подкачки
+        Get-CimInstance Win32_PageFileSetting | Remove-CimInstance -ErrorAction SilentlyContinue
+    } else {
+        Write-Host "RAM <= 31GB. Установка фиксированного файла подкачки размером 8 ГБ..."
+        
+        # Очищаем старые настройки, чтобы избежать дублирования
+        Get-CimInstance Win32_PageFileSetting | Remove-CimInstance -ErrorAction SilentlyContinue
+        
+        # Создаем новый файл подкачки на диске C: с жестким приведением к [uint32]
+        New-CimInstance -ClassName Win32_PageFileSetting -Property @{
+            Name        = 'C:\pagefile.sys'
+            InitialSize = [uint32]8192
+            MaximumSize = [uint32]8192
+        } | Out-Null
+    }
+    Write-Host ">>> Конфигурация памяти завершена успешно!"
 
 } catch {
     Write-Warning "Ошибка во время оптимизации: $($_.Exception.Message)"
