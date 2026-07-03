@@ -50,7 +50,7 @@
 
 *   📦 **`apps-install.ps1` — Базовый пакет ПО**
 
-    Надежная "тихая" (silent) установка повседневных программ. Автоматически скачивает по прямым ссылкам и разворачивает: *Google Chrome, Steam (интегрируется, но отключается в автозагрузке), WinRAR, qBittorrent, ShareX, K-Lite Codec Pack и RMS Host*.
+    Надежная "тихая" (silent) установка повседневных программ. Автоматически скачивает по прямым ссылкам и разворачивает: *Google Chrome, Steam (интегрируется, но отключается в автозагрузке), WinRAR, qBittorrent, ShareX,  и K-Lite Codec Pack*.
     
 *   📝 **`office-install.ps1` — Развертывание Microsoft Office**
 
