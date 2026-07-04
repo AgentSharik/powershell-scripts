@@ -394,7 +394,6 @@ $Form.Add_Shown({
     $Border.Controls.Add($BtnOk)
 
     $Diag.ShowDialog() | Out-Null
-}
 
 # --- 3. ДАННЫЕ ЗАДАЧ ---
 $ScriptsToRun = @(
