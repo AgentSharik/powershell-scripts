@@ -226,7 +226,7 @@ $ProgressGlare.BackColor = [System.Drawing.Color]::FromArgb(180, 215, 255) # Б�
 $ProgressFill.Controls.Add($ProgressGlare)
 
 $AnimTimer = New-Object System.Windows.Forms.Timer
-$AnimTimer.Interval = 20 # Обновление каждые 20 мс (~50 FPS)
+$AnimTimer.Interval = 30 # Обновление каждые 30 мс
 $AnimTimer.Add_Tick({
     if ($ProgressFill.Width -gt 0) {
         $NewX = $ProgressGlare.Left + 6 # Скорость движения пикселей
