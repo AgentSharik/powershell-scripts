@@ -195,7 +195,7 @@ try {
 # --- 3.5: ShareX (v20.2.0 с ключом подавления автозапуска и принудительным киллом) ---
 try {
     Write-Host "`n>>> [5/7] Установка ShareX..."
-    $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe'
+    $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'
     $sharexFile = Join-Path $env:TEMP 'sharex_setup.exe'
     
     Write-Host "Скачивание инсталлятора ShareX..."
