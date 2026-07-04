@@ -87,13 +87,24 @@ try {
     Write-Host "`n>>> Шаг 2: Скачивание и тихая установка DirectX End-User Runtimes..."
     $DxUri = "https://download.microsoft.com/download/8/4/a/84a35bf1-dafe-4ae8-82af-ad2ae20b6b14/directx_Jun2010_redist.exe"
     $DxFile = Join-Path $env:TEMP "dx_redist.exe"
-    $DxExtractDir = Join-Path $env:TEMP "dx_extract"
+    
+    # Использование изолированного пути без пробелов предотвращает сбой синтаксиса ключа /T
+    $DxExtractDir = "C:\dx_extract"
     
     try {
         if (-not (Test-Path $DxExtractDir)) { New-Item -ItemType Directory -Path $DxExtractDir | Out-Null }
         
+        Write-Host "Скачивание дистрибутива DirectX..."
         Download-SetupFile -Uri $DxUri -OutFile $DxFile
-        Install-Executable -Path $DxFile -Arguments "/Q /T:`"$DxExtractDir`""
+        
+        Write-Host "Распаковка CAB-файлов компонентов..."
+        # Передаем путь напрямую без внутренних кавычек, чтобы IExpress-распаковщик не выдал ошибку
+        Install-Executable -Path $DxFile -Arguments "/Q /T:$DxExtractDir"
+        
+        # Пауза 2 секунды для гарантированного освобождения потоков файловой системы
+        Start-Sleep -Seconds 2
+        
+        Write-Host "Запуск финального инсталлятора dxsetup..."
         Install-Executable -Path (Join-Path $DxExtractDir "dxsetup.exe") -Arguments "/silent"
         
         Write-Host ">>> Все компоненты DirectX успешно установлены."
@@ -101,7 +112,7 @@ try {
         Write-Warning "Не удалось установить компоненты DirectX: $($_.Exception.Message)"
     } finally {
         Remove-Item $DxFile -Force -ErrorAction SilentlyContinue
-        Remove-Item $DxExtractDir -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $DxExtractDir) { Remove-Item $DxExtractDir -Recurse -Force -ErrorAction SilentlyContinue }
     }
 
     # ----------------------------------------------------
