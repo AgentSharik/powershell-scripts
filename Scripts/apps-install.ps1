@@ -105,7 +105,7 @@ function Install-MsiPackage {
 
 # --- 3.1: Google Chrome Enterprise (MSI) ---
 try {
-    Write-Host "`n>>> [1/7] Установка Google Chrome..."
+    Write-Host "`n>>> [1/6] Установка Google Chrome..."
     $ChromeUri  = 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi'
     $ChromeFile = Join-Path $env:TEMP 'GoogleChromeEnterprise.msi'
     
@@ -150,7 +150,7 @@ try {
 
 # --- 3.3: WinRAR (Официальная русская x64 версия) ---
 try {
-    Write-Host "`n>>> [3/7] Установка WinRAR RU..."
+    Write-Host "`n>>> [3/6] Установка WinRAR RU..."
     $WinRarUri  = 'https://www.rarlab.com/rar/winrar-x64-701ru.exe'
     $WinRarFile = Join-Path $env:TEMP 'winrar-x64-ru.exe'
     
@@ -173,7 +173,7 @@ try {
 
 # --- 3.4: qBittorrent (Прямая ссылка на релиз 5.2.2 с libtorrent 1.2.x) ---
 try {
-    Write-Host "`n>>> [4/7] Установка qBittorrent (libtorrent 1.2.x)..."
+    Write-Host "`n>>> [4/6] Установка qBittorrent (libtorrent 1.2.x)..."
     $qbUri  = 'https://github.com/qbittorrent/qBittorrent/releases/download/release-5.2.2/qbittorrent_5.2.2_x64_setup.exe'
     $qbFile = Join-Path $env:TEMP 'qbittorrent_setup.exe'
     
@@ -194,7 +194,7 @@ try {
 
 # --- 3.5: ShareX (v20.2.0 с ключом подавления автозапуска и принудительным киллом) ---
 try {
-    Write-Host "`n>>> [5/7] Установка ShareX..."
+    Write-Host "`n>>> [5/6] Установка ShareX..."
     $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'
     $sharexFile = Join-Path $env:TEMP 'sharex_setup.exe'
     
@@ -219,7 +219,7 @@ try {
 
 # --- 3.6: K-Lite Codec Pack Mega ---
 try {
-    Write-Host "`n>>> [6/7] Установка K-Lite Codec Pack Mega..."
+    Write-Host "`n>>> [6/6] Установка K-Lite Codec Pack Mega..."
     $KLiteUri  = 'https://files2.codecguide.com/K-Lite_Codec_Pack_1975_Mega.exe'
     $KLiteFile = Join-Path $env:TEMP 'klite_setup.exe'
     
