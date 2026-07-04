@@ -229,7 +229,7 @@ $AnimTimer = New-Object System.Windows.Forms.Timer
 $AnimTimer.Interval = 20 # Обновление каждые 20 мс (~50 fps)
 $AnimTimer.Add_Tick({
     if ($ProgressFill.Width -gt 0) {
-        $NewX = $ProgressGlare.Left + 4 # Скорость движения пикселей
+        $NewX = $ProgressGlare.Left + 6 # Скорость движения пикселей
         if ($NewX -gt $ProgressFill.Width) {
             $NewX = -60 # Сброс за левый край
         }
