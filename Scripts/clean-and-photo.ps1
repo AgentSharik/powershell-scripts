@@ -1,7 +1,6 @@
 # =========================================================================
 # Имя файла: clean-and-photo.ps1
-# Назначение: Очистка системы, настройка Photo Viewer, оптимизация файла подкачки 
-#             и отложенный сброс ошибок Центра обновлений (WaaS)
+# Назначение: Очистка системы и активация классического Photo Viewer
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -21,6 +20,7 @@ try {
     Write-Host ">>> Начало очистки встроенного мусора..."
 
     # Список масок приложений, которые нужно УДАЛИТЬ БЕЗЖАЛОСТНО
+    # Магазин, Калькулятор, Заметки, Блокнот, Фото, Медиаплеер, Paint 3D и Xbox НЕ ТРОГАЕМ
     $BloatList = @(
         "Yandex.Music",                 # Превентивное удаление Яндекс.Музыки
         "Microsoft.ZuneMusic",          # Музыка Groove (Groove Music) - СНОСИМ!
@@ -59,104 +59,48 @@ try {
     if (Test-Path "$env:SystemRoot\SysWOW64\OneDriveSetup.exe") { Start-Process "$env:SystemRoot\SysWOW64\OneDriveSetup.exe" -ArgumentList '/uninstall' -Wait }
 
     # ----------------------------------------------------
-    # ЭТАП 2: РЕГИСТРАЦИЯ ПРОСМОТРА ФОТОГРАФИЙ
+    # ЭТАП 2: АКТИВАЦИЯ КЛАССИЧЕСКОГО ПРОСМОТРА ФОТО
     # ----------------------------------------------------
-    Write-Host ">>> Регистрация Просмотра фотографий..."
+    Write-Host ">>> Активация Просмотра фотографий Windows 7..."
     
-    $associations = @(".jpg", ".jpeg", ".bmp", ".dib", ".gif", ".jfif", ".jpe", ".png", ".tif", ".tiff", ".wdp")
-    $regPath = "HKLM:\SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations"
-
-    if (!(Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-
-    foreach ($ext in $associations) {
-        New-ItemProperty -Path $regPath -Name $ext -Value "PhotoViewer.FileAssoc.Tiff" -PropertyType String -Force | Out-Null
+    # 1) Включаем ассоциации в HKLM
+    $assocPath = "HKLM:\SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities\FileAssociations"
+    if (-not (Test-Path $assocPath)) { New-Item -Path $assocPath -Force | Out-Null }
+    @(".jpg",".jpeg",".png",".bmp",".gif",".tif",".tiff",".jfif",".wdp") | ForEach-Object {
+        Set-ItemProperty -Path $assocPath -Name $_ -Value "PhotoViewer.FileAssoc.Tiff" -Force
     }
-    
-    # Это важно: без этой строчки приложение может не появиться в списке выбора
+
+    # 2) Создаём DefaultAppAssociations.xml для DISM
+    $daaPath = "C:\Windows\Setup\Scripts\DefaultAppAssociations.xml"
+    New-Item -ItemType Directory -Force -Path (Split-Path $daaPath) | Out-Null
+    $xmlContent = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<DefaultAssociations>
+  <Association Identifier=".jpg"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jpeg" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".jfif" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".png"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".bmp"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".gif"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".tif"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".tiff" ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+  <Association Identifier=".wdp"  ProgId="PhotoViewer.FileAssoc.Tiff" ApplicationName="Windows Photo Viewer" />
+</DefaultAssociations>
+'@
+    [System.IO.File]::WriteAllText($daaPath, $xmlContent, [System.Text.Encoding]::UTF8)
+
+    # 3) Импорт через DISM
+    $dismArgs = @("/Online", "/Import-DefaultAppAssociations:$daaPath")
+    $p = Start-Process -FilePath "dism.exe" -ArgumentList $dismArgs -PassThru -Wait -NoNewWindow
+    if ($p.ExitCode -ne 0) { throw "DISM завершился с кодом $($p.ExitCode)." }
+
+    # 4) Регистрация в RegisteredApplications
     Set-ItemProperty -Path "HKLM:\SOFTWARE\RegisteredApplications" -Name "Windows Photo Viewer" -Value "SOFTWARE\Microsoft\Windows Photo Viewer\Capabilities" -Force
     
-    Write-Host ">>> Регистрация завершена. Теперь в 'Открыть с помощью' должен появиться 'Просмотр фотографий Windows'." -ForegroundColor Green
-    # ----------------------------------------------------
-    # ЭТАП 3: ОПТИМИЗАЦИЯ ФАЙЛА ПОДКАЧКИ (ЧЕРЕЗ РЕЕСТР)
-    # ----------------------------------------------------
-    Write-Host ">>> Проверка ОЗУ и конфигурация файла подкачки..."
-    
-    $RAM_KB = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize
-    $Threshold_KB = 32505856
-
-    # Снимаем галочку "Автоматически выбирать объем файла подкачки"
-    Set-CimInstance -Query "Select * from Win32_ComputerSystem" -Property @{ AutomaticManagedPagefile = $False }
-
-    $RegPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-
-    if ($RAM_KB -ge $Threshold_KB) {
-        Write-Host "RAM >= 32GB. Полное отключение файла подкачки (Pagefile)..."
-        Set-ItemProperty -Path $RegPath -Name "PagingFiles" -Value @("") -Type MultiString -Force
-    } else {
-        Write-Host "RAM <= 31GB. Установка фиксированного файла подкачки размером 8 ГБ..."
-        $PageFileString = "C:\pagefile.sys 8192 8192"
-        Set-ItemProperty -Path $RegPath -Name "PagingFiles" -Value @($PageFileString) -Type MultiString -Force
-    }
-    Write-Host ">>> Конфигурация памяти завершена успешно! Изменения вступят в силу после перезагрузки ПК."
-
-# ----------------------------------------------------
-    # ЭТАП 4: ФИКС WaaS + АВТОУДАЛЕНИЕ ПАПКИ
-    # ----------------------------------------------------
-    Write-Host ">>> Подготовка фикса..."
-    
-    $FixDir = "C:\ProgramData\WaaS_Fix"
-    if (-not (Test-Path $FixDir)) { New-Item -ItemType Directory -Force -Path $FixDir | Out-Null }
-    
-    $RegPath = Join-Path $FixDir "WaaS-reset.reg"
-    $CmdPath = Join-Path $FixDir "apply_fix.cmd"
-    $TaskName = "WaaS_Reset_60min"
-    
-    # 1. Файл реестра
-    $RegContent = @"
-Windows Registry Editor Version 5.00
-
-[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment]
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment]
-"Endpoint"="settings-win.data.microsoft.com"
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment\Cache]
-"UpToDateStatus"=dword:00000000
-"UpToDateImpact"=dword:00000000
-"UpToDateDays"=dword:00000000
-"@
-    $RegContent | Out-File -FilePath $RegPath -Encoding Unicode
-    
-    # 2. CMD-файл с выходом из папки перед удалением
-    $CmdContent = @"
-@echo off
-:: Импортируем реестр используя полный путь
-reg import "$RegPath"
-
-:: Удаляем задачу из планировщика
-schtasks /delete /tn "$TaskName" /f
-
-:: ВАЖНО: Выходим из папки перед её удалением
-cd /d C:\
-
-:: Удаляем всю папку с фиксами
-rd /s /q "$FixDir"
-"@
-    [System.IO.File]::WriteAllText($CmdPath, $CmdContent, [System.Text.Encoding]::UTF8)
-    
-    # 3. Задача
-    $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$CmdPath`""
-    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(60)
-    $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    
-    $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings
-    Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force | Out-Null
-    
-    Write-Host ">>> Готово. Папка и задача удалятся автоматически через 60 минут."
+    Write-Host ">>> Просмотр фотографий успешно настроен по умолчанию!"
 
 } catch {
-    Write-Warning "Ошибка: $($_.Exception.Message)"
+    Write-Warning "Ошибка во время оптимизации: $($_.Exception.Message)"
 } finally {
     Stop-Transcript
 }
