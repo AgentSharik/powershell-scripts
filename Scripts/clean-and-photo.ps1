@@ -1,6 +1,7 @@
 # =========================================================================
 # Имя файла: clean-and-photo.ps1
-# Назначение: Очистка системы, настройка Photo Viewer и оптимизация файла подкачки
+# Назначение: Очистка системы, настройка Photo Viewer, оптимизация файла подкачки 
+#             и отложенный сброс ошибок Центра обновлений (WaaS)
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -120,6 +121,62 @@ try {
         Set-ItemProperty -Path $RegPath -Name "PagingFiles" -Value @($PageFileString) -Type MultiString -Force
     }
     Write-Host ">>> Конфигурация памяти завершена успешно! Изменения вступят в силу после перезагрузки ПК."
+
+    # ----------------------------------------------------
+    # ЭТАП 4: ОТЛОЖЕННЫЙ СБРОС ЦЕНТРА ОБНОВЛЕНИЙ (Через 1 час)
+    # ----------------------------------------------------
+    Write-Host ">>> Создание отложенной задачи для фикса WaaS-reset..."
+    
+    # Создаем скрытую временную папку, которая доживет до запуска задачи
+    $FixDir = "$env:ProgramData\WaaS_Fix"
+    if (-not (Test-Path $FixDir)) { New-Item -ItemType Directory -Force -Path $FixDir | Out-Null }
+    
+    $WaaS_RegFilePath = Join-Path $FixDir "waas.reg"
+    $WaaS_ScriptPath  = Join-Path $FixDir "run_fix.ps1"
+    $TaskName = "WaaS_Reset_Delayed"
+    
+    # 1. Создаем сам reg-файл с твиком
+    $WaaS_RegContent = @'
+Windows Registry Editor Version 5.00
+
+[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment]
+"Endpoint"="settings-win.data.microsoft.com"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WaaSAssessment\Cache]
+"UpToDateStatus"=dword:00000000
+"UpToDateImpact"=dword:00000000
+"UpToDateDays"=dword:00000000
+'@
+    [System.IO.File]::WriteAllText($WaaS_RegFilePath, $WaaS_RegContent, [System.Text.Encoding]::UTF8)
+    
+    # 2. Создаем скрипт-чистильщик. Он импортирует реестр, удалит задачу в планировщике и сотрет эту временную папку.
+    $ScriptContent = @"
+reg.exe import `"$WaaS_RegFilePath`"
+Unregister-ScheduledTask -TaskName `"$TaskName`" -Confirm:`$false
+Start-Sleep -Seconds 2
+Remove-Item -Path `"$FixDir`" -Recurse -Force
+"@
+    [System.IO.File]::WriteAllText($WaaS_ScriptPath, $ScriptContent, [System.Text.Encoding]::UTF8)
+    
+    # 3. Настраиваем Планировщик задач
+    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$WaaS_ScriptPath`""
+    
+    # Считаем время: текущее + 1 час
+    $TriggerTime = (Get-Date).AddHours(1)
+    $Trigger = New-ScheduledTaskTrigger -Once -At $TriggerTime
+    
+    # Выполнять от имени СИСТЕМЫ (наивысшие права, работает в фоне без окон)
+    $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    
+    # StartWhenAvailable - ВАЖНАЯ настройка! Если ПК через час будет выключен, задача сработает при первом же включении
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+    
+    $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings
+    Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force | Out-Null
+    
+    Write-Host ">>> Отложенная задача '$TaskName' создана! Сработает незаметно в $($TriggerTime.ToString('HH:mm')) и удалит сама себя."
 
 } catch {
     Write-Warning "Ошибка во время оптимизации: $($_.Exception.Message)"
