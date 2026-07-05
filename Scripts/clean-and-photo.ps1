@@ -99,7 +99,7 @@ try {
     }
     Write-Host ">>> Конфигурация памяти завершена успешно! Изменения вступят в силу после перезагрузки ПК."
 
-    # ----------------------------------------------------
+# ----------------------------------------------------
     # ЭТАП 4: ФИКС WaaS + АВТОУДАЛЕНИЕ ПАПКИ
     # ----------------------------------------------------
     Write-Host ">>> Подготовка фикса..."
@@ -109,7 +109,7 @@ try {
     
     $RegPath = Join-Path $FixDir "WaaS-reset.reg"
     $CmdPath = Join-Path $FixDir "apply_fix.cmd"
-    $TaskName = "WaaS_Reset_30min"
+    $TaskName = "WaaS_Reset_60min"
     
     # 1. Файл реестра
     $RegContent = @"
@@ -146,14 +146,14 @@ rd /s /q "$FixDir"
     
     # 3. Задача
     $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$CmdPath`""
-    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(30)
+    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(60)
     $Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     
     $Task = New-ScheduledTask -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings
     Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force | Out-Null
     
-    Write-Host ">>> Готово. Папка и задача удалятся автоматически через 30 минут."
+    Write-Host ">>> Готово. Папка и задача удалятся автоматически через 60 минут."
 
 } catch {
     Write-Warning "Ошибка: $($_.Exception.Message)"
