@@ -1,6 +1,6 @@
 # =========================================================================
 # Имя файла: apps-install.ps1
-# Назначение: Абсолютно надежная установка базового софта + qBittorrent, ShareX, K-Lite, RMS Host
+# Назначение: Абсолютно надежная установка базового софта + qBittorrent, ShareX, K-Lite
 # =========================================================================
 
 Set-StrictMode -Version Latest
@@ -123,7 +123,7 @@ try {
 
 # --- 3.2: Steam Client (EXE) ---
 try {
-    Write-Host "`n>>> [2/7] Установка Steam..."
+    Write-Host "`n>>> [2/6] Установка Steam..."
     $SteamUri  = 'https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe'
     $SteamFile = Join-Path $env:TEMP 'SteamSetup.exe'
     
@@ -133,17 +133,8 @@ try {
     Write-Host "Запуск тихой установки с ключом /S..."
     Install-Executable -Path $SteamFile -Arguments '/S'
     
-    Write-Host "Перевод автозапуска Steam в состояние 'Отключено' в Диспетчере задач..."
-    # Обращаемся к ветке StartupApproved, которая контролирует статус элементов автозагрузки
-    $StartupApprovedPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
-    if (-not (Test-Path $StartupApprovedPath)) { New-Item -Path $StartupApprovedPath -Force | Out-Null }
-    
-    # Массив байтов, где 0x03 в начале означает, что элемент отключен
-    $DisabledValue = [byte[]](0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
-    Set-ItemProperty -Path $StartupApprovedPath -Name "Steam" -Value $DisabledValue -Type Binary -Force
-    
     Remove-Item $SteamFile -Force -ErrorAction SilentlyContinue
-    Write-Host ">>> Steam установлен успешно (сохранен в автозагрузке, но выключен)."
+    Write-Host ">>> Steam установлен успешно."
 } catch {
     Write-Warning "Не удалось установить Steam: $($_.Exception.Message)"
 }
@@ -195,19 +186,21 @@ try {
 # --- 3.5: ShareX (v20.2.0 с ключом подавления автозапуска и принудительным киллом) ---
 try {
     Write-Host "`n>>> [5/6] Установка ShareX..."
-    $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'
+    $sharexUri  = 'https://github.com/ShareX/ShareX/releases/download/v20.2.0/ShareX-20.2.0-setup-x64.exe'
     $sharexFile = Join-Path $env:TEMP 'sharex_setup.exe'
     
     Write-Host "Скачивание инсталлятора ShareX..."
     Download-SetupFile -Uri $sharexUri -OutFile $sharexFile -ExpectedHash $null
     
     Write-Host "Запуск тихой установки с подавлением автозапуска (/SP-)..."
+    # Добавлен ключ /SP-, чтобы установщик Inno Setup не открывал программу в конце
     Start-Process -FilePath $sharexFile -ArgumentList '/VERYSILENT /NORESTART /MERGETASKS=!desktopicon /SP-' -NoNewWindow
     
     Write-Host "Ожидаем 20 секунд для завершения установки ShareX..."
     Start-Sleep -Seconds 30
     
     Write-Host "Принудительное завершение процессов ShareX для избежания зависаний..."
+    # На всякий случай жестко прибиваем процессы, если они еще висят
     Stop-Process -Name "ShareX-20.2.0-setup-x64" -Force -ErrorAction SilentlyContinue
     Stop-Process -Name "ShareX" -Force -ErrorAction SilentlyContinue
     
@@ -239,6 +232,6 @@ try {
 # ЭТАП 4: ЗАВЕРШЕНИЕ РАБОТЫ
 # =========================================================================
 Write-Host "`n========================================================="
-Write-Host " ВСЕ ЭТАПЫ ВЫПОЛНЕНЫ. ЗАКРЫТИЕ ЛОГА."
+Write-Host " ВСЕ ЭТАПЫ ВЫПОЛНЕНИЫ. ЗАКРЫТИЕ ЛОГА."
 Write-Host "========================================================="
 Stop-Transcript
