@@ -100,7 +100,6 @@ function Show-ExitDialog {
 
 # --- 3. ДАННЫЕ ЗАДАЧ ---
 $ScriptsToRun = @(
-    [PSCustomObject]@{ Name = "install-sys-components.ps1"; Title = "Установка системных компонентов"; LogName = "Настройка компонентов";  LabelRef = $null },
     [PSCustomObject]@{ Name = "apps-install.ps1";           Title = "Установка софта";                 LogName = "Установка ПО";             LabelRef = $null },
     [PSCustomObject]@{ Name = "office-install.ps1";         Title = "Установка и активация Microsoft Office"; LogName = "Установка Office";         LabelRef = $null },
     [PSCustomObject]@{ Name = "clean-and-photo.ps1";        Title = "Оптимизация ОС и просмотр фото";        LogName = "Запуск оптимизации ОС";    LabelRef = $null }
